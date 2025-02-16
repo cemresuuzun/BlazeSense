@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1469856911",
+    "project_id": "blazesense-8d788",
+    "storage_bucket": "blazesense-8d788.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1469856911:android:3b65e0326531931c8304fa",
+        "android_client_info": {
+          "package_name": "com.flutterilk.flutterilk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpHck74EMwlJNwR_-SPmM0lcqDhr2PQcc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
