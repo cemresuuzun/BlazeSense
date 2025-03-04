@@ -155,7 +155,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const RegisterPage()),
+                    MaterialPageRoute(
+                        builder: (context) => const RegisterPage()),
                   );
                 },
                 style: TextButton.styleFrom(
@@ -176,3 +177,5 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
     );
   }
 }
+
+//comment can
