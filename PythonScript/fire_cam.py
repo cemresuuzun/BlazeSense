@@ -7,7 +7,8 @@ from supabase import create_client, Client
 import cv2
 from ultralytics import YOLO
 import time
-from config import SUPABASE_URL, SUPABASE_KEY, USER_ID, CAMERA_ID, IP_CAMERA_URL  # Credential import
+import asyncio
+from config import SUPABASE_URL, SUPABASE_KEY, USER_ID, CAMERA_ID, IP_CAMERA_URL  # Confidential bilgileri içe aktar 
 
 # Database bağlantısı için oluşturdum
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -16,66 +17,68 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 last_notification_time = 0  # Başlangıçta sıfır 
 notification_delay = 5  # Bildirimler arasında 5 saniye bekleme süresi
 
-def send_fire_notification(user_id, camera_id):
+# Supabase Realtime Bildirim Gönderme Fonksiyonu
+async def send_fire_notification(user_id, camera_id):
     global last_notification_time
     current_time = time.time()
     
-    # Son bildirim üzerinden min 5 saniye geçtiyse bildirim gönder
     if current_time - last_notification_time >= notification_delay:
-        response = supabase.table("notifications").insert({
+        data = {
             "user_id": user_id,
             "camera_id": camera_id,
-            "message": "Review this 3 minutes. Is it a real fire?"
-        }).execute()
+            "message": "Review this 3 minutes. Is it a real fire?",
+            "created_at": time.strftime('%Y-%m-%d %H:%M:%S')  # Timestamp ekleyelim
+        }
+        response = await supabase.table("notifications").insert(data).execute()
         print("Notification sent to Supabase:", response)
-        last_notification_time = current_time  # Son bildirim zamanını güncelle
-        return response
+        last_notification_time = current_time
     else:
-        print("Skipping notification, waiting for 5 seconds delay to pass...")
-        return None
+        print("⏳ Skipping notification due to delay...")
 
-# Load trained YOLOv8 model 
+# YOLO Modelini Yükle
 model = YOLO("runs/detect/train2/weights/best.pt")  
 
-# Open IP camera stream
+# IP Kamera Bağlantısını Aç
 cap = cv2.VideoCapture(IP_CAMERA_URL)
 
 if not cap.isOpened():
     print("Error: Could not open IP camera stream.")
     exit()
 
+# Sürekli Kamera Görüntüsünü İşle
 while cap.isOpened():
     success, frame = cap.read()
     if not success:
         print("Failed to capture frame from IP camera")
         break
     
-    # Perform YOLOv8 inference on the frame
-    results = model.predict(frame, conf=0.5)  # confidence threshold can be adjusted 0.5 yazan kısım
+    # YOLO Modeli ile Algılama Yap
+    results = model.predict(frame, conf=0.5)  
     
-    # Draw detections on the frame
+    # Çerçeveleri Çiz ve Fire Detection Kontrolü Yap
     for result in results:
         for box in result.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])  # Get bounding box coordinates
-            conf = box.conf[0].item()  # Confidence score of detectsion
-            cls = int(box.cls[0])  # Class index
-            
-            # Check if detected object is 'fire' fire tek class olduğu için 0 olacak
-            if cls == 0:
-                label = f"Fire: {conf:.2f}"
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)  # Red box for fire
+            x1, y1, x2, y2 = map(int, box.xyxy[0])  
+            conf = box.conf[0].item()  
+            cls = int(box.cls[0])  
+
+            if cls == 0:  # Eğer Algılanan Obje Yangınsa
+                label = f"🔥 Fire: {conf:.2f}"
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)  
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 
-                # Supabase'e yangın algılandığı için bildirim gönder (5 saniyelik gecikme var)
-                send_fire_notification(USER_ID, CAMERA_ID)
+                # Asenkron Bildirim Gönder
+                asyncio.run(send_fire_notification(USER_ID, CAMERA_ID))
+                #Burada asenkron kullanılmasının sebebi senkron(blocking) olsaydı execute olana kadar kod durdurulurdu
+                #asenkron olduğu için real time fire detection bu delay zamanında da aynı şekilde devam ediyor
 
-    # Display the frame with detections
-    cv2.imshow("Fire Detection", frame)
+    # Görüntüyü Ekranda Göster
+    cv2.imshow("🔥 Fire Detection", frame)
 
-    # Exit on pressing 'q'
+    # 'q' Tuşuna Basınca Çıkış Yap
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# Release the IP camera stream and close all windows yapmayı sakın unutma
+# Kaynakları Serbest Bırak
 cap.release()
 cv2.destroyAllWindows()
