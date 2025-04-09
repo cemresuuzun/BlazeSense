@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutterilk/pages/profile_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+//Supabase doesn’t expose creationTime like Firebase, but you can:
+// Store it manually during sign-up.
+// Or create a users table and store additional metadata there (like name, registration date, etc.).
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -9,7 +14,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final user = FirebaseAuth.instance.currentUser;
+  final user = Supabase.instance.client.auth.currentUser;
   bool notificationsEnabled = true;
   bool soundEnabled = true;
   bool vibrationEnabled = true;
@@ -41,10 +46,19 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.access_time, color: Color(0xFFFF416C)),
-                title: const Text('Account Created'),
-                subtitle: Text(
-                  user?.metadata.creationTime?.toString() ?? 'Not available',
-                ),
+                title: const Text('User ID'),
+                subtitle: Text(user?.id ?? 'Not available'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_circle, color: Color(0xFFFF416C)),
+                title: const Text('Edit Profile'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfilePage()),
+                  );
+                },
               ),
             ],
           ),
@@ -83,10 +97,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 activeColor: const Color(0xFFFF416C),
                 onChanged: notificationsEnabled
                     ? (bool value) {
-                        setState(() {
-                          soundEnabled = value;
-                        });
-                      }
+                  setState(() {
+                    soundEnabled = value;
+                  });
+                }
                     : null,
               ),
               SwitchListTile(
@@ -96,10 +110,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 activeColor: const Color(0xFFFF416C),
                 onChanged: notificationsEnabled
                     ? (bool value) {
-                        setState(() {
-                          vibrationEnabled = value;
-                        });
-                      }
+                  setState(() {
+                    vibrationEnabled = value;
+                  });
+                }
                     : null,
               ),
             ],
@@ -108,4 +122,4 @@ class _SettingsPageState extends State<SettingsPage> {
       ],
     );
   }
-} 
+}

@@ -1,8 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutterilk/service/auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutterilk/pages/main_page.dart';
 import 'package:flutterilk/pages/register_page.dart';
+
+import '../service/auth.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -17,23 +18,36 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   String? errorMessage;
 
   Future<void> signIn() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
     try {
-      await Auth().signIn(
-        email: emailController.text,
-        password: passwordController.text,
-      );
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainPage()),
-        );
+      final auth = AuthService();
+      final response = await auth.signIn(email: email, password: password);
+
+      if (response.user != null) {
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainPage()),
+          );
+        }
+      } else {
+        setState(() {
+          errorMessage = 'Login failed. Please try again.';
+        });
       }
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       setState(() {
         errorMessage = e.message;
       });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Unexpected error: $e';
+      });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +58,9 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFFF416C), // Bright red
-              Color(0xFFFF4B2B), // Orange-red
-              Color(0xFFFF9900), // Deep orange
+              Color(0xFFFF416C),
+              Color(0xFFFF4B2B),
+              Color(0xFFFF9900),
             ],
           ),
         ),
@@ -55,48 +69,31 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Column(
-                children: [
-                  const Icon(
-                    Icons.local_fire_department,
-                    size: 80,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'BLAZESENSE',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Fire Detection System',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                ],
+              const Icon(Icons.local_fire_department, size: 80, color: Colors.white),
+              const SizedBox(height: 16),
+              const Text(
+                'BLAZESENSE',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
               ),
+              const SizedBox(height: 8),
+              const Text(
+                'Fire Detection System',
+                style: TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 40),
               TextField(
                 controller: emailController,
                 decoration: const InputDecoration(
                   labelText: "Email",
                   labelStyle: TextStyle(color: Colors.white),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white70),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white70)),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
                   prefixIcon: Icon(Icons.email, color: Colors.white),
                 ),
                 style: const TextStyle(color: Colors.white),
@@ -108,15 +105,9 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 decoration: const InputDecoration(
                   labelText: "Password",
                   labelStyle: TextStyle(color: Colors.white),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white70),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white70)),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
                   prefixIcon: Icon(Icons.lock, color: Colors.white),
                 ),
                 style: const TextStyle(color: Colors.white),
@@ -138,16 +129,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFFFF416C),
                   elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 child: const Text(
                   "Login",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 20),
@@ -155,19 +141,13 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => const RegisterPage()),
+                    MaterialPageRoute(builder: (context) => const RegisterPage()),
                   );
                 },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                ),
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
                 child: const Text(
                   "Don't have an account? Register here",
-                  style: TextStyle(
-                    fontSize: 14,
-                    decoration: TextDecoration.underline,
-                  ),
+                  style: TextStyle(fontSize: 14, decoration: TextDecoration.underline),
                 ),
               ),
             ],
@@ -177,5 +157,3 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
     );
   }
 }
-
-//comment can

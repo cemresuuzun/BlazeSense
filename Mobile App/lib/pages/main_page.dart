@@ -6,6 +6,7 @@ import 'package:flutterilk/pages/notification_logs_page.dart';
 import 'package:flutterilk/pages/change_view_page.dart';
 import 'package:flutterilk/pages/detection_logs_page.dart';
 import 'package:flutterilk/pages/settings_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -16,9 +17,11 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
+  late RealtimeChannel detectionChannel;
+  late RealtimeChannel notificationChannel;
 
   final List<Widget> _pages = [
-    const _MainView(),
+    const MainView(),
     const NotificationLogsPage(),
     const ChangeViewPage(),
     const DetectionLogsPage(),
@@ -26,13 +29,74 @@ class _MainPageState extends State<MainPage> {
   ];
 
   Future<void> _handleLogout() async {
-    await Auth().signOut();
+    await AuthService().signOut();
     if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginRegisterPage()),
       );
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final supabase = Supabase.instance.client;
+
+    detectionChannel = supabase.channel('public:detection_log');
+    detectionChannel
+        .on(
+      RealtimeListenTypes.postgresChanges,
+      ChannelFilter(
+        event: 'INSERT',
+        schema: 'public',
+        table: 'detection_log',
+      ),
+          (payload, [ref]) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '🔥 Fire detected on camera ${payload['new']['camera_id']}',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+    )
+        .subscribe();
+
+    notificationChannel = supabase.channel('public:notification_log');
+    notificationChannel
+        .on(
+      RealtimeListenTypes.postgresChanges,
+      ChannelFilter(
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notification_log',
+      ),
+          (payload, [ref]) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '🔔 Notification: ${payload['new']['message'] ?? 'New notification'}',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      },
+    )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    Supabase.instance.client.removeChannel(detectionChannel);
+    Supabase.instance.client.removeChannel(notificationChannel);
+    super.dispose();
   }
 
   @override
@@ -47,7 +111,7 @@ class _MainPageState extends State<MainPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              Auth().currentUser?.email ?? 'User',
+              AuthService().currentUser?.email ?? 'User',
               style: const TextStyle(fontSize: 16),
             ),
           ],
@@ -56,7 +120,7 @@ class _MainPageState extends State<MainPage> {
           IconButton(
             icon: const Icon(Icons.menu),
             onPressed: () {
-              // Add menu functionality here
+              // Menu action
             },
           ),
         ],
@@ -72,46 +136,30 @@ class _MainPageState extends State<MainPage> {
           });
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Main',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Notifications',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.swap_horiz),
-            label: 'Change View',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.warning),
-            label: 'Detection',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Main'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
+          BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Change View'),
+          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Detection'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
   }
 }
 
-class _MainView extends StatefulWidget {
-  const _MainView();
+class MainView extends StatefulWidget {
+  const MainView({super.key});
 
   @override
-  State<_MainView> createState() => _MainViewState();
+  State<MainView> createState() => _MainViewState();
 }
 
-class _MainViewState extends State<_MainView> {
+class _MainViewState extends State<MainView> {
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   bool _isCameraInitialized = false;
   int _selectedCamera = 0;
 
-  // Mock data for camera feeds - replace with actual camera feeds later
   final List<String> cameraNames = ['CAM 1', 'CAM 2', 'CAM 3', 'CAM 4'];
 
   @override
@@ -130,7 +178,7 @@ class _MainViewState extends State<_MainView> {
     );
 
     _initializeControllerFuture = _controller.initialize();
-    
+
     if (mounted) {
       setState(() {
         _isCameraInitialized = true;
@@ -253,9 +301,9 @@ class _MainViewState extends State<_MainView> {
                         borderRadius: BorderRadius.circular(15),
                         border: _selectedCamera == index
                             ? Border.all(
-                                color: Colors.blue,
-                                width: 3,
-                              )
+                          color: Colors.blue,
+                          width: 3,
+                        )
                             : null,
                       ),
                       child: Stack(
@@ -266,10 +314,10 @@ class _MainViewState extends State<_MainView> {
                             child: _isCameraInitialized
                                 ? CameraPreview(_controller)
                                 : const Center(
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                           Positioned(
                             top: 8,
@@ -305,4 +353,4 @@ class _MainViewState extends State<_MainView> {
       ],
     );
   }
-} 
+}

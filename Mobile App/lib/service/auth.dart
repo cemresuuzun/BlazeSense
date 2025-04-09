@@ -1,35 +1,34 @@
-import 'package:firebase_auth/firebase_auth.dart';
-class Auth{
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-  User? get currentUser => _firebaseAuth.currentUser;
+class AuthService {
+  final SupabaseClient _client = Supabase.instance.client;
 
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
-  //Register
-  Future<void> createUser({
-    required String email,
-    required String password,
-  }) async {
-    await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-    );
+  // 🔐 Sign up user
+  Future<AuthResponse> signUp({required String email, required String password}) async {
+    return await _client.auth.signUp(email: email, password: password);
   }
 
-  //Login
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
-    await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-    );
+  // 🔐 Sign in user
+  Future<AuthResponse> signIn({required String email, required String password}) async {
+    return await _client.auth.signInWithPassword(email: email, password: password);
   }
 
-  //Sign out
+  // 🔓 Sign out user
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    await _client.auth.signOut();
   }
 
+  //Create user function
+  Future<AuthResponse> createUser({required String email, required String password}) async {
+    return await Supabase.instance.client.auth.signUp(
+      email: email,
+      password: password,
+    );
+  }
+
+  // ✅ Get current user session
+  User? get currentUser => _client.auth.currentUser;
+
+  // 📡 Listen for auth state changes (optional)
+  Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 }
