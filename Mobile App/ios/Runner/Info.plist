@@ -47,5 +47,16 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to take photos</string>
+	<key>NSMicrophoneUsageDescription</key>
+    <string>This app needs access to the microphone for video and audio features.</string>
+    <key>NSUserNotificationAlertUsageDescription</key>
+    <string>This app needs to show fire detection alerts as notifications.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>fetch</string>
+      <string>remote-notification</string>
+    </array>
+    <key>NSUserNotificationUsageDescription</key>
+    <string>This app would like to send you notifications.</string>
 </dict>
 </plist>

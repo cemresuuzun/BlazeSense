@@ -8,6 +8,7 @@ import cv2
 from ultralytics import YOLO
 import time
 from config import SUPABASE_URL, SUPABASE_KEY, USER_ID, CAMERA_ID, IP_CAMERA_URL  # Credential import
+from datetime import datetime
 
 # Database bağlantısı için oluşturdum
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -19,16 +20,19 @@ notification_delay = 5  # Bildirimler arasında 5 saniye bekleme süresi
 def send_fire_notification(user_id, camera_id):
     global last_notification_time
     current_time = time.time()
-    
-    # Son bildirim üzerinden min 5 saniye geçtiyse bildirim gönder
+
     if current_time - last_notification_time >= notification_delay:
-        response = supabase.table("notifications").insert({
+        data = {
             "user_id": user_id,
             "camera_id": camera_id,
-            "message": "Review this 3 minutes. Is it a real fire?"
-        }).execute()
+            "message": "Review this 3 minutes. Is it a real fire?",
+            "is_seen": False,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        response = supabase.table("notifications").insert(data).execute()
         print("Notification sent to Supabase:", response)
-        last_notification_time = current_time  # Son bildirim zamanını güncelle
+        last_notification_time = current_time
         return response
     else:
         print("Skipping notification, waiting for 5 seconds delay to pass...")

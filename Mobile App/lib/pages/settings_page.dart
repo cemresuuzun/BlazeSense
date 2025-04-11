@@ -1,6 +1,14 @@
+
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutterilk/pages/profile_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutterilk/notification/notification_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
+
+
 
 //Supabase doesn’t expose creationTime like Firebase, but you can:
 // Store it manually during sign-up.
@@ -116,6 +124,39 @@ class _SettingsPageState extends State<SettingsPage> {
                 }
                     : null,
               ),
+              const SizedBox(height: 20),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    print("⏳ Waiting 5 seconds before notification...");
+
+                    await Future.delayed(const Duration(seconds: 5));
+
+                    final androidDetails = fln.AndroidNotificationDetails(
+                      'test_channel',
+                      'Test Notifications',
+                      channelDescription: 'Used for testing local notifications',
+                      importance: fln.Importance.max,
+                      priority: fln.Priority.high,
+                    );
+
+                    final notificationDetails = fln.NotificationDetails(android: androidDetails);
+
+                    print("🔥 Showing notification now!");
+
+                    await flutterLocalNotificationsPlugin.show(
+                      0,
+                      '🔥 Fire Detected!',
+                      'This is a delayed notification (5 seconds later)',
+                      notificationDetails,
+                    );
+                  },
+                  child: const Text('Test Fire Notification (5s Delay)'),
+                ),
+
+              ),
+
+
             ],
           ),
         ),
