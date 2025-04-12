@@ -75,7 +75,10 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  const Icon(Icons.local_fire_department, size: 80, color: Colors.white),
+                  Image.asset(
+                    'assets/LogoApp.png',
+                    height: 100,
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'BLAZESENSE',
