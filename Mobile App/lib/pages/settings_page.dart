@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutterilk/pages/profile_page.dart';
@@ -7,12 +6,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutterilk/notification/notification_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
-
-
-
-//Supabase doesn’t expose creationTime like Firebase, but you can:
-// Store it manually during sign-up.
-// Or create a users table and store additional metadata there (like name, registration date, etc.).
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -23,16 +16,65 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final user = Supabase.instance.client.auth.currentUser;
-  bool notificationsEnabled = true;
+
   bool soundEnabled = true;
   bool vibrationEnabled = true;
+  bool inAppNotifications = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserPreferences();
+  }
+
+  Future<void> fetchUserPreferences() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('settings')
+          .select('sound_enabled, vibration_enabled, in_app_notifications')
+          .eq('user_id', user?.id)
+          .single();
+
+      setState(() {
+        soundEnabled = response['sound_enabled'] ?? true;
+        vibrationEnabled = response['vibration_enabled'] ?? true;
+        inAppNotifications = response['in_app_notifications'] ?? true;
+      });
+    } catch (e) {
+      print("⚠️ No settings found for this user. Creating defaults...");
+
+      // 👶 Insert default settings
+      await Supabase.instance.client.from('settings').insert({
+        'user_id': user?.id,
+        'sound_enabled': true,
+        'vibration_enabled': true,
+        'in_app_notifications': true,
+      });
+
+      setState(() {
+        soundEnabled = true;
+        vibrationEnabled = true;
+        inAppNotifications = true;
+      });
+    }
+  }
+
+
+  Future<void> updateUserPreference(String key, bool value) async {
+    if (user == null) return;
+
+    await Supabase.instance.client
+        .from('settings') // ✅ fixed here
+        .update({key: value})
+        .eq('user_id', user!.id); // ✅ fixed here
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // User Information Section
+        // User Info
         Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
@@ -72,7 +114,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         const Divider(),
-        // Notification Preferences Section
+
+        // Notification Settings
         Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
@@ -87,76 +130,63 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Enable Notifications'),
-                subtitle: const Text('Receive alerts for fire detection'),
-                value: notificationsEnabled,
-                activeColor: const Color(0xFFFF416C),
-                onChanged: (bool value) {
-                  setState(() {
-                    notificationsEnabled = value;
-                  });
-                },
-              ),
+
+              //  Sound toggle
               SwitchListTile(
                 title: const Text('Sound'),
                 subtitle: const Text('Play sound for notifications'),
                 value: soundEnabled,
                 activeColor: const Color(0xFFFF416C),
-                onChanged: notificationsEnabled
-                    ? (bool value) {
+                onChanged: (bool value) async {
                   setState(() {
                     soundEnabled = value;
                   });
-                }
-                    : null,
+                  await updateUserPreference('sound_enabled', value);
+                },
               ),
+
+              //  Vibration toggle
               SwitchListTile(
                 title: const Text('Vibration'),
                 subtitle: const Text('Vibrate on notifications'),
                 value: vibrationEnabled,
                 activeColor: const Color(0xFFFF416C),
-                onChanged: notificationsEnabled
-                    ? (bool value) {
+                onChanged: (bool value) async {
                   setState(() {
                     vibrationEnabled = value;
                   });
-                }
-                    : null,
+                  await updateUserPreference('vibration_enabled', value);
+                },
               ),
+
+              //  In-app notifications toggle
+              SwitchListTile(
+                title: const Text('In-app Notifications'),
+                subtitle: const Text('Show alerts inside the app'),
+                value: inAppNotifications,
+                activeColor: const Color(0xFFFF416C),
+                onChanged: (bool value) async {
+                  setState(() {
+                    inAppNotifications = value;
+                  });
+                  await updateUserPreference('in_app_notifications', value);
+                },
+              ),
+
               const SizedBox(height: 20),
+
+              // Test Button
               Center(
                 child: ElevatedButton(
                   onPressed: () async {
                     print("⏳ Waiting 5 seconds before notification...");
-
                     await Future.delayed(const Duration(seconds: 5));
-
-                    final androidDetails = fln.AndroidNotificationDetails(
-                      'test_channel',
-                      'Test Notifications',
-                      channelDescription: 'Used for testing local notifications',
-                      importance: fln.Importance.max,
-                      priority: fln.Priority.high,
-                    );
-
-                    final notificationDetails = fln.NotificationDetails(android: androidDetails);
-
-                    print("🔥 Showing notification now!");
-
-                    await flutterLocalNotificationsPlugin.show(
-                      0,
-                      '🔥 Fire Detected!',
-                      'This is a delayed notification (5 seconds later)',
-                      notificationDetails,
-                    );
+                    print("🔥 Triggering showFireNotification manually...");
+                    await showFireNotification('This is a test fire alert from the settings page!');
                   },
                   child: const Text('Test Fire Notification (5s Delay)'),
                 ),
-
               ),
-
-
             ],
           ),
         ),
@@ -164,3 +194,5 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
+
+

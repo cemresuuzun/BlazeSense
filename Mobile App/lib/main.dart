@@ -8,7 +8,8 @@ import 'package:flutterilk/notification/notification_service.dart';
 import 'package:flutterilk/notification/notification_service.dart';
 
 
-
+//notification widget herhangi bir yerde açılabilsin diye eklenen navigator variable
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
@@ -46,6 +47,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'BlazeSense',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
@@ -71,6 +73,8 @@ class _SplashGateState extends State<SplashGate> {
   void initState() {
     super.initState();
     _checkSession();
+    checkUnreviewedNotifications(); //  Check for fire review!
+    listenToFireNotifications(); //  Real-time fire alert
   }
 
   Future<void> _checkSession() async {
@@ -96,5 +100,62 @@ class _SplashGateState extends State<SplashGate> {
     }
 
     return _isLoggedIn ? const MainPage() : const LoginRegisterPage();
+  }
+}
+Future<void> checkUnreviewedNotifications() async {
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return;
+
+  final response = await Supabase.instance.client
+      .from('notifications')
+      .select()
+      .eq('user_id', user.id)
+      .eq('is_reviewed', false)
+      .order('timestamp', ascending: false)
+      .limit(1)
+      .maybeSingle();
+
+  if (response != null) {
+    // Show dialog to review
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: navigatorKey.currentContext!,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('🚨 Fire Detected!'),
+            content: const Text('Please review the fire incident.'),
+            actions: [
+              TextButton(
+                child: const Text('Dismiss'),
+                onPressed: () => Navigator.pop(context),
+              ),
+              TextButton(
+                child: const Text('Mark as Reviewed'),
+                onPressed: () async {
+                  await Supabase.instance.client
+                      .from('notifications')
+                      .update({'is_reviewed': true})
+                      .eq('id', response['id'])
+                      .execute();
+
+                  // Optional: insert into detection_log
+                  await Supabase.instance.client
+                      .from('detection_log')
+                      .insert({
+                    'user_id': user.id,
+                    'camera_id': response['camera_id'],
+                    'confirmed': true,
+                    'detected_at': response['timestamp'],
+                  })
+                      .execute();
+
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 }

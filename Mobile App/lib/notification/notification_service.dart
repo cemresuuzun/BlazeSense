@@ -1,13 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vibration/vibration.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../main.dart'; // to access navigatorKey from main.dart
 
-
+//Notification göndermek için variable
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
 
-
+// Listen for fire notifications
 void listenToFireNotifications() {
   print("📡 Listening for notifications from Supabase...");
   final channel = Supabase.instance.client
@@ -21,37 +22,79 @@ void listenToFireNotifications() {
     ),
         (payload, [ref]) {
       final message = payload['new']['message'] ?? 'New notification';
-      print("🔥 New notification received: $message"); // 👈 add this!
+      print("🔥 New notification received: $message");
       showFireNotification(message);
     },
   )
       .subscribe();
 }
 
+// Notification göstermek için kullandığımız fonksiyon, user setting seçeneklerini seçip ona göre gösteriyor
 Future<void> showFireNotification(String message) async {
-  const android = AndroidNotificationDetails(
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return;
+
+  final settingsResponse = await Supabase.instance.client
+      .from('settings')
+      .select('in_app_notifications, sound_enabled, vibration_enabled')
+      .eq('user_id', user.id)
+      .single();
+
+  final inApp = settingsResponse['in_app_notifications'] ?? true;
+  final sound = settingsResponse['sound_enabled'] ?? true;
+  final vibrate = settingsResponse['vibration_enabled'] ?? false;
+
+  final android = AndroidNotificationDetails(
     'fire_channel',
     'Fire Alerts',
     channelDescription: 'Notifications for fire detections',
     importance: Importance.max,
     priority: Priority.high,
+    playSound: sound,
   );
 
-  const platform = NotificationDetails(android: android);
+  final platform = NotificationDetails(android: android);
 
-  // ✅ Show the notification
-  await flutterLocalNotificationsPlugin.show(
-    0,
-    '🔥 Fire Detected!',
-    message,
-    platform,
-  );
+  //  App is in foreground
+  final isAppInForeground = navigatorKey.currentContext != null;
 
-  // ✅ Check if vibration is enabled
-  final shouldVibrate = await isVibrationEnabled();
+  if (isAppInForeground && inApp) {
+    final context = navigatorKey.currentContext;
 
+    if (context != null && context.mounted) {
+      // ✨ Ensures the dialog waits for a clean frame
+      await Future.delayed(Duration.zero);
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('🔥 Fire Detected!'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      print("Could not show dialog: context is null or not mounted");
+    }
+  } else {
+    //  App is in background — show standard notification
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      '🔥 Fire Detected!',
+      message,
+      platform,
+    );
+  }
+
+
+  //  Vibration (if enabled)
   final hasVibrator = await Vibration.hasVibrator();
-  if (shouldVibrate && hasVibrator == true) {
+  if (vibrate && hasVibrator == true) {
     if (await Vibration.hasAmplitudeControl() ?? false) {
       Vibration.vibrate(duration: 700, amplitude: 128);
     } else {
@@ -60,16 +103,13 @@ Future<void> showFireNotification(String message) async {
   }
 }
 
-Future<bool> isVibrationEnabled() async {
+// 🔧 Update user setting
+Future<void> updateUserPreference(String key, bool value) async {
   final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return;
 
-  if (user == null) return false;
-
-  final response = await Supabase.instance.client
-      .from('users')
-      .select('vibration_enabled')
-      .eq('id', user.id)
-      .single();
-
-  return response['vibration_enabled'] ?? false;
+  await Supabase.instance.client
+      .from('settings')
+      .update({key: value})
+      .eq('user_id', user.id);
 }
