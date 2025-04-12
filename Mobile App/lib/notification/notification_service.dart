@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vibration/vibration.dart';
 import '../main.dart'; // to access navigatorKey from main.dart
@@ -79,10 +80,10 @@ Future<void> showFireNotification(String message) async {
         ),
       );
     } else {
-      print("Could not show dialog: context is null or not mounted");
+      print("⚠️ Could not show dialog: context is null or not mounted");
     }
   } else {
-    //  App is in background — show standard notification
+    // ✅ App is in background — show standard notification
     await flutterLocalNotificationsPlugin.show(
       0,
       '🔥 Fire Detected!',
@@ -90,7 +91,6 @@ Future<void> showFireNotification(String message) async {
       platform,
     );
   }
-
 
   //  Vibration (if enabled)
   final hasVibrator = await Vibration.hasVibrator();

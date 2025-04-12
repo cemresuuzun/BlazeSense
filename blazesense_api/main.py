@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 import os
 
+
 # Load .env variables
 load_dotenv()
 

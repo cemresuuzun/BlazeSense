@@ -26,7 +26,7 @@ class _MainPageState extends State<MainPage> {
 
   final List<Widget> _pages = [
     CameraView(), // 👈 this is your beautiful camera UI
-    const NotificationLogsPage(),
+    const NotificationLogPage(),
     const ChangeViewPage(),
     const DetectionLogsPage(),
     const SettingsPage(),
@@ -54,28 +54,41 @@ class _MainPageState extends State<MainPage> {
     detectionChannel
         .on(
       RealtimeListenTypes.postgresChanges,
-      ChannelFilter(event: 'INSERT', schema: 'public', table: 'detection_log'),
+      ChannelFilter(
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+      ),
           (payload, [ref]) {
         if (!mounted) return;
-        final cam = payload['new']['camera_id'];
-        final msg = '🔥 Fire detected on camera $cam';
-        showFireNotification(msg);
+
+        final dynamic cam = payload['new']['camera_id'];
+        final String msg = '🔥 Fire detected on camera $cam';
+        final String id = payload['new']['id']; // 👈 this is your notificationId
+
+        showFireNotification(msg); // ✅
       },
     )
+
         .subscribe();
 
     notificationChannel = supabase.channel('public:notifications');
+
     notificationChannel
         .on(
       RealtimeListenTypes.postgresChanges,
       ChannelFilter(event: 'INSERT', schema: 'public', table: 'notifications'),
           (payload, [ref]) {
         if (!mounted) return;
-        final msg = payload['new']['message'] ?? 'New notification';
+
+        final String msg = payload['new']['message'] ?? 'New notification';
+        final String id = payload['new']['id']; // 🔥 this is the UUID you need
+
         showFireNotification(msg);
       },
     )
         .subscribe();
+
   }
 
 
