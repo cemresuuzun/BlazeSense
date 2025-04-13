@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutterilk/pages/profile_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutterilk/pages/profile_page.dart';
 import 'package:flutterilk/notification/notification_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -21,10 +17,22 @@ class _SettingsPageState extends State<SettingsPage> {
   bool vibrationEnabled = true;
   bool inAppNotifications = true;
 
+  String username = '';
+  String avatarUrl = 'assets/batman.png'; // Varsayılan avatar
+
+  // Avatar listesi
+  final List<String> avatarList = [
+    'assets/batman.png',
+    'assets/wonderwoman.png',
+
+
+  ];
+
   @override
   void initState() {
     super.initState();
     fetchUserPreferences();
+    fetchUsername();
   }
 
   Future<void> fetchUserPreferences() async {
@@ -58,6 +66,24 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> fetchUsername() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('users')
+          .select('username')
+          .eq('id', user?.id)
+          .single();
+
+      setState(() {
+        username = response['username'] ?? '';
+      });
+    } catch (e) {
+      setState(() {
+        username = 'Unknown User';
+      });
+    }
+  }
+
   Future<void> updateUserPreference(String key, bool value) async {
     if (user == null) return;
 
@@ -67,44 +93,126 @@ class _SettingsPageState extends State<SettingsPage> {
         .eq('user_id', user!.id);
   }
 
+  // Avatar seçim fonksiyonu
+  void _selectAvatar() async {
+    final String? selectedAvatar = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Choose Avatar'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: avatarList.map((avatar) {
+                return ListTile(
+                  leading: Image.asset(avatar, width: 50, height: 50),
+                  title: Text(avatar.split('/').last),
+                  onTap: () {
+                    Navigator.pop(context, avatar); // Seçilen avatarı döndürüyoruz
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+
+    // Eğer kullanıcı bir avatar seçtiyse, avatarUrl'yi güncelliyoruz
+    if (selectedAvatar != null) {
+      setState(() {
+        avatarUrl = selectedAvatar;
+      });
+    }
+  }
+
+  Widget _buildCard({required String title, required List<Widget> children}) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: const Color(0xFFF7F7F7),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFB5062D),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTile(IconData icon, String title, String subtitle) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFB5062D)),
+      title: Text(title),
+      subtitle: Text(subtitle),
+    );
+  }
+
+  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
+    return SwitchListTile(
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: value,
+      activeColor: const Color(0xFFB5062D),
+      onChanged: (bool newValue) async => await onChanged(newValue),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFDFDFD),
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: const Color(0xFFFF416C),
+        backgroundColor: const Color(0xFFB5062D),
         foregroundColor: Colors.white,
       ),
-      body: ListView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        children: [
-          // User Info
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          children: [
+            _buildCard(
+              title: 'User Information',
               children: [
-                const Text(
-                  'User Information',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF416C),
+                Center(
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: _selectAvatar, // Avatarı tıklanabilir hale getirdik
+                        child: CircleAvatar(
+                          radius: 40,
+                          backgroundImage: AssetImage(avatarUrl), // Seçilen avatar
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        username.isNotEmpty ? username : 'Username',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                _buildTile(Icons.email, 'Email', user?.email ?? 'Not available'),
+                _buildTile(Icons.perm_identity, 'User ID', user?.id ?? 'Not available'),
                 ListTile(
-                  leading: const Icon(Icons.email, color: Color(0xFFFF416C)),
-                  title: const Text('Email'),
-                  subtitle: Text(user?.email ?? 'Not available'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.access_time, color: Color(0xFFFF416C)),
-                  title: const Text('User ID'),
-                  subtitle: Text(user?.id ?? 'Not available'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.account_circle, color: Color(0xFFFF416C)),
+                  leading: const Icon(Icons.account_circle, color: Color(0xFFB5062D)),
                   title: const Text('Edit Profile'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
@@ -116,78 +224,39 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
-          ),
-          const Divider(),
-
-          // Notification Settings
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            _buildCard(
+              title: 'Notification Preferences',
               children: [
-                const Text(
-                  'Notification Preferences',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF416C),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                SwitchListTile(
-                  title: const Text('Sound'),
-                  subtitle: const Text('Play sound for notifications'),
-                  value: soundEnabled,
-                  activeColor: const Color(0xFFFF416C),
-                  onChanged: (bool value) async {
-                    setState(() {
-                      soundEnabled = value;
-                    });
-                    await updateUserPreference('sound_enabled', value);
-                  },
-                ),
-                SwitchListTile(
-                  title: const Text('Vibration'),
-                  subtitle: const Text('Vibrate on notifications'),
-                  value: vibrationEnabled,
-                  activeColor: const Color(0xFFFF416C),
-                  onChanged: (bool value) async {
-                    setState(() {
-                      vibrationEnabled = value;
-                    });
-                    await updateUserPreference('vibration_enabled', value);
-                  },
-                ),
-                SwitchListTile(
-                  title: const Text('In-app Notifications'),
-                  subtitle: const Text('Show alerts inside the app'),
-                  value: inAppNotifications,
-                  activeColor: const Color(0xFFFF416C),
-                  onChanged: (bool value) async {
-                    setState(() {
-                      inAppNotifications = value;
-                    });
-                    await updateUserPreference('in_app_notifications', value);
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      print("⏳ Waiting 5 seconds before notification...");
-                      await Future.delayed(const Duration(seconds: 5));
-                      print("🔥 Triggering showFireNotification manually...");
-                      await showFireNotification('This is a test fire alert from the settings page!');
-                    },
-                    child: const Text('Test Fire Notification (5s Delay)'),
-                  ),
-                ),
+                _buildSwitchTile('Sound', 'Play sound for notifications', soundEnabled, (val) async {
+                  setState(() => soundEnabled = val);
+                  await updateUserPreference('sound_enabled', val);
+                }),
+                _buildSwitchTile('Vibration', 'Vibrate on notifications', vibrationEnabled, (val) async {
+                  setState(() => vibrationEnabled = val);
+                  await updateUserPreference('vibration_enabled', val);
+                }),
+                _buildSwitchTile('In-app Notifications', 'Show alerts inside the app', inAppNotifications, (val) async {
+                  setState(() => inAppNotifications = val);
+                  await updateUserPreference('in_app_notifications', val);
+                }),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB5062D),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: () async {
+                await Future.delayed(const Duration(seconds: 5));
+                await showFireNotification('This is a test fire alert from the settings page!');
+              },
+              child: const Text('Test Fire Notification (5s Delay)'),
+            ),
+          ],
+        ),
       ),
     );
   }
