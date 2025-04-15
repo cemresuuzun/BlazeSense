@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutterilk/pages/profile_page.dart';
 import 'package:flutterilk/notification/notification_service.dart';
+import 'package:flutterilk/pages/about_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -18,14 +19,11 @@ class _SettingsPageState extends State<SettingsPage> {
   bool inAppNotifications = true;
 
   String username = '';
-  String avatarUrl = 'assets/batman.png'; // Varsayılan avatar
+  String avatarUrl = 'assets/batman.png';
 
-  // Avatar listesi
   final List<String> avatarList = [
     'assets/batman.png',
     'assets/wonderwoman.png',
-
-
   ];
 
   @override
@@ -49,8 +47,6 @@ class _SettingsPageState extends State<SettingsPage> {
         inAppNotifications = response['in_app_notifications'] ?? true;
       });
     } catch (e) {
-      print("⚠️ No settings found for this user. Creating defaults...");
-
       await Supabase.instance.client.from('settings').insert({
         'user_id': user?.id,
         'sound_enabled': true,
@@ -93,7 +89,6 @@ class _SettingsPageState extends State<SettingsPage> {
         .eq('user_id', user!.id);
   }
 
-  // Avatar seçim fonksiyonu
   void _selectAvatar() async {
     final String? selectedAvatar = await showDialog<String>(
       context: context,
@@ -107,7 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: Image.asset(avatar, width: 50, height: 50),
                   title: Text(avatar.split('/').last),
                   onTap: () {
-                    Navigator.pop(context, avatar); // Seçilen avatarı döndürüyoruz
+                    Navigator.pop(context, avatar);
                   },
                 );
               }).toList(),
@@ -117,7 +112,6 @@ class _SettingsPageState extends State<SettingsPage> {
       },
     );
 
-    // Eğer kullanıcı bir avatar seçtiyse, avatarUrl'yi güncelliyoruz
     if (selectedAvatar != null) {
       setState(() {
         avatarUrl = selectedAvatar;
@@ -125,7 +119,11 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Widget _buildCard({required String title, required List<Widget> children}) {
+  Widget _buildCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -136,13 +134,19 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFB5062D),
-              ),
+            Row(
+              children: [
+                Icon(icon, color: const Color(0xFFB5062D)),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFB5062D),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             ...children,
@@ -185,15 +189,16 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             _buildCard(
               title: 'User Information',
+              icon: Icons.person,
               children: [
                 Center(
                   child: Column(
                     children: [
                       GestureDetector(
-                        onTap: _selectAvatar, // Avatarı tıklanabilir hale getirdik
+                        onTap: _selectAvatar,
                         child: CircleAvatar(
                           radius: 40,
-                          backgroundImage: AssetImage(avatarUrl), // Seçilen avatar
+                          backgroundImage: AssetImage(avatarUrl),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -226,6 +231,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             _buildCard(
               title: 'Notification Preferences',
+              icon: Icons.notifications_active,
               children: [
                 _buildSwitchTile('Sound', 'Play sound for notifications', soundEnabled, (val) async {
                   setState(() => soundEnabled = val);
@@ -239,6 +245,22 @@ class _SettingsPageState extends State<SettingsPage> {
                   setState(() => inAppNotifications = val);
                   await updateUserPreference('in_app_notifications', val);
                 }),
+              ],
+            ),
+            _buildCard(
+              title: 'About',
+              icon: Icons.info_outline,
+              children: [
+                ListTile(
+                  title: const Text('About This App'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AboutPage()),
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 12),
