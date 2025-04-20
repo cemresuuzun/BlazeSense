@@ -14,8 +14,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final user = Supabase.instance.client.auth.currentUser;
 
-  bool soundEnabled = true;
-  bool vibrationEnabled = true;
   bool inAppNotifications = true;
 
   String username = '';
@@ -37,26 +35,20 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final response = await Supabase.instance.client
           .from('settings')
-          .select('sound_enabled, vibration_enabled, in_app_notifications')
+          .select('in_app_notifications')
           .eq('user_id', user?.id)
           .single();
 
       setState(() {
-        soundEnabled = response['sound_enabled'] ?? true;
-        vibrationEnabled = response['vibration_enabled'] ?? true;
         inAppNotifications = response['in_app_notifications'] ?? true;
       });
     } catch (e) {
       await Supabase.instance.client.from('settings').insert({
         'user_id': user?.id,
-        'sound_enabled': true,
-        'vibration_enabled': true,
         'in_app_notifications': true,
       });
 
       setState(() {
-        soundEnabled = true;
-        vibrationEnabled = true;
         inAppNotifications = true;
       });
     }
@@ -100,7 +92,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: avatarList.map((avatar) {
                 return ListTile(
                   leading: Image.asset(avatar, width: 50, height: 50),
-                  title: Text(avatar.split('/').last),
+                  title: Text(avatar.split('/').last.replaceAll('.png', '')),
                   onTap: () {
                     Navigator.pop(context, avatar);
                   },
@@ -136,14 +128,14 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Row(
               children: [
-                Icon(icon, color: const Color(0xFFB5062D)),
+                Icon(icon, color: const Color(0xFFFF0000)),
                 const SizedBox(width: 8),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFB5062D),
+                    color: Color(0xFFFF0000),
                   ),
                 ),
               ],
@@ -158,7 +150,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildTile(IconData icon, String title, String subtitle) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFFB5062D)),
+      leading: Icon(icon, color: const Color(0xFFFF0000)),
       title: Text(title),
       subtitle: Text(subtitle),
     );
@@ -169,7 +161,7 @@ class _SettingsPageState extends State<SettingsPage> {
       title: Text(title),
       subtitle: Text(subtitle),
       value: value,
-      activeColor: const Color(0xFFB5062D),
+      activeColor: const Color(0xFFFF0000),
       onChanged: (bool newValue) async => await onChanged(newValue),
     );
   }
@@ -180,7 +172,7 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: const Color(0xFFFDFDFD),
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: const Color(0xFFB5062D),
+        backgroundColor: const Color(0xFFFF0000),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -217,7 +209,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildTile(Icons.email, 'Email', user?.email ?? 'Not available'),
                 _buildTile(Icons.perm_identity, 'User ID', user?.id ?? 'Not available'),
                 ListTile(
-                  leading: const Icon(Icons.account_circle, color: Color(0xFFB5062D)),
+                  leading: const Icon(Icons.account_circle, color: Color(0xFFFF0000)),
                   title: const Text('Edit Profile'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
@@ -233,14 +225,6 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'Notification Preferences',
               icon: Icons.notifications_active,
               children: [
-                _buildSwitchTile('Sound', 'Play sound for notifications', soundEnabled, (val) async {
-                  setState(() => soundEnabled = val);
-                  await updateUserPreference('sound_enabled', val);
-                }),
-                _buildSwitchTile('Vibration', 'Vibrate on notifications', vibrationEnabled, (val) async {
-                  setState(() => vibrationEnabled = val);
-                  await updateUserPreference('vibration_enabled', val);
-                }),
                 _buildSwitchTile('In-app Notifications', 'Show alerts inside the app', inAppNotifications, (val) async {
                   setState(() => inAppNotifications = val);
                   await updateUserPreference('in_app_notifications', val);
@@ -266,7 +250,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 12),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFB5062D),
+                backgroundColor: const Color(0xFFFF0000),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

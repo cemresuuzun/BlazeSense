@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -37,13 +38,12 @@ Future<void> showFireNotification(String message) async {
 
   final settingsResponse = await Supabase.instance.client
       .from('settings')
-      .select('in_app_notifications, sound_enabled, vibration_enabled')
+      .select('in_app_notifications')
       .eq('user_id', user.id)
       .single();
 
   final inApp = settingsResponse['in_app_notifications'] ?? true;
-  final sound = settingsResponse['sound_enabled'] ?? true;
-  final vibrate = settingsResponse['vibration_enabled'] ?? false;
+
 
   final android = AndroidNotificationDetails(
     'fire_channel',
@@ -51,10 +51,17 @@ Future<void> showFireNotification(String message) async {
     channelDescription: 'Notifications for fire detections',
     importance: Importance.max,
     priority: Priority.high,
-    playSound: sound,
+
   );
 
-  final platform = NotificationDetails(android: android);
+  final iOS = DarwinNotificationDetails(
+    sound: 'fire.caf',
+  );
+
+  final platform = NotificationDetails(
+    android: android,
+    iOS: iOS,
+  );
 
   //  App is in foreground
   final isAppInForeground = navigatorKey.currentContext != null;
@@ -65,6 +72,13 @@ Future<void> showFireNotification(String message) async {
     if (context != null && context.mounted) {
       // ✨ Ensures the dialog waits for a clean frame
       await Future.delayed(Duration.zero);
+
+      await flutterLocalNotificationsPlugin.show(
+        0,
+        '🔥 Fire Detected!',
+        message,
+        platform,
+      );
 
       showDialog(
         context: context,
@@ -81,24 +95,6 @@ Future<void> showFireNotification(String message) async {
       );
     } else {
       print("⚠️ Could not show dialog: context is null or not mounted");
-    }
-  } else {
-    // ✅ App is in background — show standard notification
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      '🔥 Fire Detected!',
-      message,
-      platform,
-    );
-  }
-
-  //  Vibration (if enabled)
-  final hasVibrator = await Vibration.hasVibrator();
-  if (vibrate && hasVibrator == true) {
-    if (await Vibration.hasAmplitudeControl() ?? false) {
-      Vibration.vibrate(duration: 700, amplitude: 128);
-    } else {
-      Vibration.vibrate(duration: 700);
     }
   }
 }
