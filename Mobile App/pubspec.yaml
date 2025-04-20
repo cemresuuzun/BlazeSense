@@ -32,25 +32,20 @@ dependencies:
     sdk: flutter
 
   # Supabase
-  supabase_flutter: ^1.10.13  # Or latest version on pub.dev
-
+  supabase_flutter: ^1.10.13
   cupertino_icons: ^1.0.2
   camera: ^0.10.5+2
   app_links: ^3.4.1
-  fluttertoast: ^8.2.4 # or latest
+  fluttertoast: ^8.2.4
+  flutter_local_notifications: ^19.0.0
+  vibration: ^1.8.4
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^5.0.0
-  flutter_local_notifications: ^19.0.0
-  vibration: ^1.8.4
   flutter_launcher_icons: ^0.13.1
 
 flutter_icons:
