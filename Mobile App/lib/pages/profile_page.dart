@@ -131,7 +131,7 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: const Color(0xFFF4F4F4), // Hafif gri arka plan
       appBar: AppBar(
         title: const Text('My Profile'),
-        backgroundColor: const Color(0xFFB5062D),
+        backgroundColor: const Color(0xFFFF0000),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -158,7 +158,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   const CircleAvatar(
                     radius: 30,
-                    backgroundColor: Color(0xFFB5062D),
+                    backgroundColor: Color(0xFFFF0000),
                     child: Icon(Icons.person, color: Colors.white, size: 30),
                   ),
                   const SizedBox(width: 16),
@@ -199,7 +199,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     : const Icon(Icons.save),
                 label: const Text('Update Profile'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB5062D),
+                  backgroundColor: const Color(0xFFFF0000),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -222,7 +222,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Text(
                   errorMessage!,
                   style: const TextStyle(
-                    color: Colors.red,
+                    color: Color(0xFFFF0000),
                     fontWeight: FontWeight.w500,
                   ),
                 ),

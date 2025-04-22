@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutterilk/pages/notification_logs_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -10,6 +11,8 @@ import 'package:flutterilk/notification/notification_service.dart';
 
 //notification widget herhangi bir yerde açılabilsin diye eklenen navigator variable
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NotificationLogPageState> notificationLogKey = GlobalKey<NotificationLogPageState>();
+
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
@@ -116,47 +119,5 @@ Future<void> checkUnreviewedNotifications() async {
       .limit(1)
       .maybeSingle();
 
-  if (response != null) {
-    // Show dialog to review
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showDialog(
-        context: navigatorKey.currentContext!,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('🚨 Fire Detected!'),
-            content: const Text('Please review the fire incident.'),
-            actions: [
-              TextButton(
-                child: const Text('Dismiss'),
-                onPressed: () => Navigator.pop(context),
-              ),
-              TextButton(
-                child: const Text('Mark as Reviewed'),
-                onPressed: () async {
-                  await Supabase.instance.client
-                      .from('notifications')
-                      .update({'is_reviewed': true})
-                      .eq('id', response['id'])
-                      .execute();
 
-                  // Optional: insert into detection_log
-                  await Supabase.instance.client
-                      .from('detection_log')
-                      .insert({
-                    'user_id': user.id,
-                    'camera_id': response['camera_id'],
-                    'confirmed': true,
-                    'detected_at': response['timestamp'],
-                  })
-                      .execute();
-
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          );
-        },
-      );
-    });
-  }
 }

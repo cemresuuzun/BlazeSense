@@ -42,12 +42,12 @@ def detect_fire(data: FireNotification):
         }).execute()
         return {"status": "success", "data": response.data}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": str(e)}   
 
 @app.get("/notifications")
 def get_notifications():
     try:
-        response = supabase.table("notifications").select("*").order("timestamp", desc=True).execute()
+        response = supabase.table("notifications").select("*").order("timestamp", desc=True).execute()      
         return response.data
     except Exception as e:
         return {"status": "error", "message": str(e)}
