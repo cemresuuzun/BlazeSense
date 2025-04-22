@@ -9,6 +9,7 @@ import 'package:flutterilk/pages/settings_page.dart';
 import 'package:flutterilk/notification/notification_service.dart';
 import 'package:flutterilk/service/auth.dart';
 import 'package:camera/camera.dart';
+import '../main.dart';
 import 'camera_view.dart';
 
 class MainPage extends StatefulWidget {
@@ -25,7 +26,7 @@ class _MainPageState extends State<MainPage> {
 
   final List<Widget> _pages = [
     CameraView(),
-    const NotificationLogPage(),
+    NotificationLogPage(key: notificationLogKey),
     const ChangeViewPage(),
     const DetectionLogsPage(),
     const SettingsPage(),
@@ -70,41 +71,7 @@ class _MainPageState extends State<MainPage> {
 
     final supabase = Supabase.instance.client;
 
-    detectionChannel = supabase.channel('public:detection_log');
-    detectionChannel
-        .on(
-      RealtimeListenTypes.postgresChanges,
-      ChannelFilter(
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-      ),
-          (payload, [ref]) {
-        if (!mounted) return;
-        final dynamic cam = payload['new']['camera_id'];
-        final String msg = '🔥 Fire detected on camera $cam';
-        final String id = payload['new']['id']; // 👈 this is your notificationId
 
-        showFireNotification(msg); // ✅
-      },
-    )
-        .subscribe();
-
-    notificationChannel = supabase.channel('public:notifications');
-
-    notificationChannel
-        .on(
-      RealtimeListenTypes.postgresChanges,
-      ChannelFilter(event: 'INSERT', schema: 'public', table: 'notifications'),
-          (payload, [ref]) {
-        if (!mounted) return;
-        final String msg = payload['new']['message'] ?? 'New notification';
-        final String id = payload['new']['id']; // 🔥 this is the UUID you need
-
-        showFireNotification(msg);
-      },
-    )
-        .subscribe();
   }
 
   @override

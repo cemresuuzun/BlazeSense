@@ -119,7 +119,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
-                      'assets/4.png',
+                      'assets/LogoApp.png',
                       height: 200,
                       fit: BoxFit.scaleDown,
                     ),

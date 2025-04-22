@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:vibration/vibration.dart';
-import '../main.dart'; // to access navigatorKey from main.dart
+import '../main.dart'; // for navigatorKey
 
-//Notification göndermek için variable
+// Notification instance
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
 
-// Listen for fire notifications
+// Listen to fire notifications
 void listenToFireNotifications() {
   print("📡 Listening for notifications from Supabase...");
-  final channel = Supabase.instance.client
+  Supabase.instance.client
       .channel('public:notifications')
       .on(
     RealtimeListenTypes.postgresChanges,
@@ -23,16 +20,17 @@ void listenToFireNotifications() {
       table: 'notifications',
     ),
         (payload, [ref]) {
-      final message = payload['new']['message'] ?? 'New notification';
+      final newNotification = payload['new'] as Map<String, dynamic>;
+      final message = newNotification['message'] ?? 'New fire alert';
       print("🔥 New notification received: $message");
-      showFireNotification(message);
+      showFireNotification(newNotification); // pass the entire object
     },
   )
       .subscribe();
 }
 
-// Notification göstermek için kullandığımız fonksiyon, user setting seçeneklerini seçip ona göre gösteriyor
-Future<void> showFireNotification(String message) async {
+// Show notification and handle dialog + DB update
+Future<void> showFireNotification(Map<String, dynamic> notification) async {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return;
 
@@ -44,14 +42,12 @@ Future<void> showFireNotification(String message) async {
 
   final inApp = settingsResponse['in_app_notifications'] ?? true;
 
-
   final android = AndroidNotificationDetails(
     'fire_channel',
     'Fire Alerts',
     channelDescription: 'Notifications for fire detections',
     importance: Importance.max,
     priority: Priority.high,
-
   );
 
   final iOS = DarwinNotificationDetails(
@@ -63,32 +59,52 @@ Future<void> showFireNotification(String message) async {
     iOS: iOS,
   );
 
-  //  App is in foreground
   final isAppInForeground = navigatorKey.currentContext != null;
 
   if (isAppInForeground && inApp) {
     final context = navigatorKey.currentContext;
+    const fireDetectedTitle = '🔥 Fire Detected!';
 
     if (context != null && context.mounted) {
-      // ✨ Ensures the dialog waits for a clean frame
       await Future.delayed(Duration.zero);
 
       await flutterLocalNotificationsPlugin.show(
         0,
-        '🔥 Fire Detected!',
-        message,
+        fireDetectedTitle,
+        notification['message'] ?? 'Fire detected!',
         platform,
       );
 
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('🔥 Fire Detected!'),
-          content: Text(message),
+          title: const Text(fireDetectedTitle),
+          content: Text(notification['message'] ?? 'Please review the fire incident.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: const Text('Dismiss'),
+            ),
+            TextButton(
+              onPressed: () async {
+                //  Mark notification as reviewed
+                await Supabase.instance.client
+                    .from('notifications')
+                    .update({'is_reviewed': true})
+                    .eq('id', notification['id'])
+                    .execute();
+
+                //  Log into detection_log
+                await Supabase.instance.client.from('detection_log').insert({
+                  'user_id': user.id,
+                  'camera_id': notification['camera_id'],
+                  'confirmed': true,
+                  'detected_at': notification['timestamp'],
+                }).execute();
+
+                Navigator.pop(context);
+              },
+              child: const Text('Mark as Reviewed'),
             ),
           ],
         ),
@@ -99,7 +115,6 @@ Future<void> showFireNotification(String message) async {
   }
 }
 
-// 🔧 Update user setting
 Future<void> updateUserPreference(String key, bool value) async {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return;

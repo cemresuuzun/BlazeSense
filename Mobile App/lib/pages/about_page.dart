@@ -9,7 +9,7 @@ class AboutPage extends StatelessWidget {
       backgroundColor: const Color(0xFFFDFDFD),
       appBar: AppBar(
         title: const Text('About BlazeSense'),
-        backgroundColor: const Color(0xFFB5062D),
+        backgroundColor: const Color(0xFFFF0000),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView( // ADDED: Makes it scrollable
@@ -38,11 +38,15 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 30),
             const Text(
               '© 2025 BlazeSense Team ',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
 
             const Text(
-              '(Fettah Elçik, Emre Karaçal, Cemresu Uzun, Mustafaca Daşdemir, Ahmet Utku Nadirler)',
+              'Emre Karaçal Mustafacan Daşdemir Ahmet Utku Nadir',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const Text(
+              ' Fettah Elçik, Cemresu Uzun',
               style: TextStyle(color: Colors.grey),
             ),
 
@@ -59,7 +63,7 @@ class AboutPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFFB5062D)),
+          Icon(icon, color: const Color(0xFFFF0000)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

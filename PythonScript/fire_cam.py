@@ -24,26 +24,30 @@ def send_fire_notification_via_api(user_id, camera_id, message):
             "user_id": user_id,
             "camera_id": camera_id,
             "message": message,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat() + "Z"
         }
+
+        print("📤 Sending fire payload:", payload)
 
         try:
             res = requests.post("http://localhost:8000/detect/fire", json=payload)
-            print("🔥 Bildirim API ile gönderildi:", res.status_code, res.json())
-            last_notification_time = current_time  # Son bildirim zamanını güncelle
+            print("🔥 API yanıtı:", res.status_code)
+            print("📦 İçerik:", res.json())
+            last_notification_time = current_time
+        except requests.exceptions.RequestException as e:
+            print("❌ API'ye bağlanılamadı:", e)
         except Exception as e:
-            print("❌ API'ye bildirim gönderilemedi:", e)
+            print("❌ Diğer hata:", e)
     else:
-        print("⏳ Bildirim atlanıyor, 5 saniyelik bekleme süresi geçmedi...")
+        print("⏳ 5 saniyelik bekleme süresi dolmadı.")
 
 # Load trained YOLOv8 model 
 model = YOLO("Yolo/best.pt")  
 
-# Open IP camera stream
-# cap = cv2.VideoCapture(IP_CAMERA_URL)
-#Open Mac camera for testing
-cap = cv2.VideoCapture(0)
+# Open IP camera stream (RTSP protokolü)
+cap = cv2.VideoCapture(IP_CAMERA_URL)
 
+# Kamera açılamazsa hata mesajı ver
 if not cap.isOpened():
     print("Error: Could not open IP camera stream.")
     exit()
@@ -70,7 +74,7 @@ while cap.isOpened():
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)  # Red box for fire
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 
-                #  API üzerinden yangın bildirimi gönderimi (5 saniyelik gecikme var)
+                #  API üzerinden yangın bildirimi gönderimi (5 saniyelik gecikme var) burası okey kalacak
                 send_fire_notification_via_api(USER_ID, CAMERA_ID, "🔥 Fire detected by YOLO and sent by API!")
 
     # Display the frame with detections
