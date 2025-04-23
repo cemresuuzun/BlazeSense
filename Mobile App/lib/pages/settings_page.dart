@@ -77,8 +77,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     await Supabase.instance.client
         .from('settings')
-        .update({key: value})
-        .eq('user_id', user!.id);
+        .update({key: value}).eq('user_id', user!.id);
   }
 
   void _selectAvatar() async {
@@ -156,7 +155,8 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
+  Widget _buildSwitchTile(
+      String title, String subtitle, bool value, Function(bool) onChanged) {
     return SwitchListTile(
       title: Text(title),
       subtitle: Text(subtitle),
@@ -206,16 +206,20 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildTile(Icons.email, 'Email', user?.email ?? 'Not available'),
-                _buildTile(Icons.perm_identity, 'User ID', user?.id ?? 'Not available'),
+                _buildTile(
+                    Icons.email, 'Email', user?.email ?? 'Not available'),
+                _buildTile(Icons.perm_identity, 'User ID',
+                    user?.id ?? 'Not available'),
                 ListTile(
-                  leading: const Icon(Icons.account_circle, color: Color(0xFFFF0000)),
+                  leading: const Icon(Icons.account_circle,
+                      color: Color(0xFFFF0000)),
                   title: const Text('Edit Profile'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ProfilePage()),
+                      MaterialPageRoute(
+                          builder: (context) => const ProfilePage()),
                     );
                   },
                 ),
@@ -225,7 +229,10 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'Notification Preferences',
               icon: Icons.notifications_active,
               children: [
-                _buildSwitchTile('In-app Notifications', 'Show alerts inside the app', inAppNotifications, (val) async {
+                _buildSwitchTile(
+                    'In-app Notifications',
+                    'Show alerts inside the app',
+                    inAppNotifications, (val) async {
                   setState(() => inAppNotifications = val);
                   await updateUserPreference('in_app_notifications', val);
                 }),
@@ -241,7 +248,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const AboutPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const AboutPage()),
                     );
                   },
                 ),
@@ -252,12 +260,14 @@ class _SettingsPageState extends State<SettingsPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF0000),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () async {
                 await Future.delayed(const Duration(seconds: 5));
-                await showFireNotification('This is a test fire alert from the settings page!');
+                //await showFireNotification('This is a test fire alert from the settings page!');
               },
               child: const Text('Test Fire Notification (5s Delay)'),
             ),
