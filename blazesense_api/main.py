@@ -4,6 +4,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import os
+from flask import Flask, Response
+import uvicorn
+
+
 
 
 # Load .env variables
@@ -51,3 +55,6 @@ def get_notifications():
         return response.data
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

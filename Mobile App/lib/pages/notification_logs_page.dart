@@ -24,6 +24,7 @@ class NotificationLogPageState extends State<NotificationLogPage> {
     final userId = Supabase.instance.client.auth.currentUser?.id;
 
     if (userId == null || userId.isEmpty) {
+      if (!mounted) return;
       setState(() {
         _hasLoaded = true;
       });
@@ -34,17 +35,19 @@ class NotificationLogPageState extends State<NotificationLogPage> {
         .from('notifications')
         .select('id, message, timestamp, is_reviewed, ip_cameras(id, name)')
         .eq('user_id', userId)
-        .eq('is_reviewed',
-            false) //we'll only fetch the unreviewed ones for this page
+        .eq('is_reviewed', false)
         .order('timestamp', ascending: false)
         .execute();
 
+    if (!mounted) return;
+
     setState(() {
       _localNotifications =
-          List<Map<String, dynamic>>.from(response.data ?? []);
+      List<Map<String, dynamic>>.from(response.data ?? []);
       _hasLoaded = true;
     });
   }
+
 
   void addNotificationToUI({
     required String message,

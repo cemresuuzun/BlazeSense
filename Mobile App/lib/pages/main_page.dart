@@ -10,7 +10,9 @@ import 'package:flutterilk/notification/notification_service.dart';
 import 'package:flutterilk/service/auth.dart';
 import 'package:camera/camera.dart';
 import '../main.dart';
-import 'camera_view.dart';
+import 'package:flutterilk/pages/ip_camera_view.dart';
+
+
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -25,7 +27,7 @@ class _MainPageState extends State<MainPage> {
   late RealtimeChannel notificationChannel;
 
   final List<Widget> _pages = [
-    CameraView(),
+    IPCameraView(),
     NotificationLogPage(key: notificationLogKey),
     const ChangeViewPage(),
     const DetectionLogsPage(),
