@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutterilk/pages/about_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutterilk/pages/profile_page.dart';
-import 'package:flutterilk/notification/notification_service.dart';
-import 'package:flutterilk/pages/about_page.dart';
+import 'package:flutterilk/pages/login_register.dart'; // LoginPage import
+import 'package:flutterilk/service/auth.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -84,19 +86,53 @@ class _SettingsPageState extends State<SettingsPage> {
     final String? selectedAvatar = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Choose Avatar'),
-          content: SingleChildScrollView(
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
             child: Column(
-              children: avatarList.map((avatar) {
-                return ListTile(
-                  leading: Image.asset(avatar, width: 50, height: 50),
-                  title: Text(avatar.split('/').last.replaceAll('.png', '')),
-                  onTap: () {
-                    Navigator.pop(context, avatar);
-                  },
-                );
-              }).toList(),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.account_circle,
+                  size: 50,
+                  color: Colors.black,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Choose Avatar',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SingleChildScrollView(
+                  child: Column(
+                    children: avatarList.map((avatar) {
+                      return ListTile(
+                        leading: Image.asset(avatar, width: 50, height: 50),
+                        title: Text(avatar.split('/').last.replaceAll('.png', '')),
+                        onTap: () {
+                          Navigator.pop(context, avatar);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -110,6 +146,109 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  // Logout popup function
+  Future<void> _handleLogout(BuildContext context) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              )
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.logout_rounded,
+                size: 50,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Log Out?",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "Are you sure you want to log out from your account?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[200],
+                      foregroundColor: Colors.black87,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () async {
+                      await AuthService().signOut();
+
+                      // Show Toast Message
+                      Fluttertoast.showToast(
+                        msg: "You have been logged out.",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.BOTTOM,
+                        backgroundColor: Colors.green,
+                        textColor: Colors.white,
+                        fontSize: 16.0,
+                      );
+
+                      if (context.mounted) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LoginRegisterPage()),
+                        );
+                      }
+                    },
+                    child: const Text("Log out"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCard({
     required String title,
     required IconData icon,
@@ -118,7 +257,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: const Color(0xFFF7F7F7),
+      color: const Color(0xFFFFFFFF),
       elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -127,14 +266,14 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Row(
               children: [
-                Icon(icon, color: const Color(0xFFFF0000)),
+                Icon(icon, color: const Color(0xFF282828)),
                 const SizedBox(width: 8),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF0000),
+                    color: Color(0xFF282828),
                   ),
                 ),
               ],
@@ -149,7 +288,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildTile(IconData icon, String title, String subtitle) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFFFF0000)),
+      leading: Icon(icon, color: const Color(0xFF282828)),
       title: Text(title),
       subtitle: Text(subtitle),
     );
@@ -161,7 +300,7 @@ class _SettingsPageState extends State<SettingsPage> {
       title: Text(title),
       subtitle: Text(subtitle),
       value: value,
-      activeColor: const Color(0xFFFF0000),
+      activeColor: const Color(0xFF282828),
       onChanged: (bool newValue) async => await onChanged(newValue),
     );
   }
@@ -172,8 +311,14 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: const Color(0xFFFDFDFD),
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: const Color(0xFFFF0000),
+        backgroundColor: const Color(0xFF282828),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () => _handleLogout(context), // Show logout popup
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -212,7 +357,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     user?.id ?? 'Not available'),
                 ListTile(
                   leading: const Icon(Icons.account_circle,
-                      color: Color(0xFFFF0000)),
+                      color: Color(0xFF282828)),
                   title: const Text('Edit Profile'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
@@ -254,22 +399,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF0000),
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: () async {
-                await Future.delayed(const Duration(seconds: 5));
-                //await showFireNotification('This is a test fire alert from the settings page!');
-              },
-              child: const Text('Test Fire Notification (5s Delay)'),
             ),
           ],
         ),
