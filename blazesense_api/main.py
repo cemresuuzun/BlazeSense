@@ -9,14 +9,10 @@ import uvicorn
 
 
 
-
-# Load .env variables
-load_dotenv()
+# 🚀 Import from config.py
+from config import SUPABASE_URL, SUPABASE_KEY
 
 # Connect to Supabase
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Create FastAPI app

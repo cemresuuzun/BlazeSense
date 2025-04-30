@@ -6,9 +6,26 @@
 import cv2
 from ultralytics import YOLO
 import time
-from config import USER_ID, CAMERA_ID, IP_CAMERA_URL  # Updated: Supabase bağlantısı artık kullanılmadığı için gereksiz olanlar çıkarıldı
+from config import USER_ID, CAMERA_ID, IP_CAMERA_URL,IP_CAMERA_URL1,ACCOUNT_SID,AUTH_TOKEN  # Updated: Supabase bağlantısı artık kullanılmadığı için gereksiz olanlar çıkarıldı
 from datetime import datetime
 import requests
+from twilio.rest import Client  # Twilio import
+
+# Twilio credentials
+twilio_client = Client(ACCOUNT_SID, AUTH_TOKEN)
+
+# WhatsApp message sender
+def send_whatsapp_message(to_number):
+    """Function to send WhatsApp message using Twilio."""
+    try:
+        message = twilio_client.messages.create(
+            body='🔥 Fire Alert! A possible fire was detected by BlazeSense. Please check your app.',
+            from_='whatsapp:+14155238886',  # Twilio sandbox number
+            to=f'whatsapp:{to_number}'
+        )
+        print(f"✅ WhatsApp message sent successfully! Message SID: {message.sid}")
+    except Exception as e:
+        print(f"❌ Failed to send WhatsApp message: {e}")
 
 # Son gönderilen bildirim zamanını takip etmek için değişken
 last_notification_time = 0  # Başlangıçta sıfır
@@ -33,6 +50,10 @@ def send_fire_notification_via_api(user_id, camera_id, message):
             res = requests.post("http://localhost:8000/detect/fire", json=payload)
             print("🔥 API yanıtı:", res.status_code)
             print("📦 İçerik:", res.json())
+
+            # API başarılı ise WhatsApp bildirimi de gönder
+            send_whatsapp_message('+905335117541')  # Replace with your WhatsApp number
+
             last_notification_time = current_time
         except requests.exceptions.RequestException as e:
             print("❌ API'ye bağlanılamadı:", e)
@@ -42,10 +63,10 @@ def send_fire_notification_via_api(user_id, camera_id, message):
         print("⏳ 5 saniyelik bekleme süresi dolmadı.")
 
 # Load trained YOLOv8 model
-model = YOLO("Yolo/best.pt")
+model = YOLO(r"C:\BlazeSense\BlazeSense\Yolo\best.pt")
 
 # Open IP camera stream (RTSP protokolü)
-cap = cv2.VideoCapture(IP_CAMERA_URL)
+cap = cv2.VideoCapture(IP_CAMERA_URL1)
 
 # Kamera açılamazsa hata mesajı ver
 if not cap.isOpened():
@@ -79,6 +100,14 @@ try:
 
                     # API üzerinden yangın bildirimi gönderimi (5 saniyelik gecikme var)
                     send_fire_notification_via_api(USER_ID, CAMERA_ID, "🔥 Fire detected by YOLO and sent by API!")
+
+        # Display the frame with the detection results
+        frame_resized = cv2.resize(frame, (960, 540))  
+        cv2.imshow("Fire Detection Camera Feed", frame_resized)
+
+        # Wait for 1 ms for key press; if the user presses 'q', stop the video feed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
         time.sleep(0.05)  # CPU yükünü azaltmak için kısa bir gecikme
 
