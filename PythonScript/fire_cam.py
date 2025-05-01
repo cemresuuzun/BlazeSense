@@ -1,3 +1,8 @@
+# Database ilişkileri API üzerinden kurulmamıştır!!! APIendpointler belirlenerek api ile veri alışverişi yapılacaktır
+# Bu kod demonstration için kullanılıp API endpointlerle bağlandıktan sonra son halini alabilecektir. Needs update
+# Belirtilen importlar yolo, database ve config dosyasıdır.
+# SUPABASE_URL, SUPABASE_KEY, USER_ID, CAMERA_ID, IP_CAMERA_URL confidential bilgileri githuba gönderilmeyecek bir config dosyasında saklanmaktadır kod bu şekilde çalışmayacaktır
+
 import cv2
 from ultralytics import YOLO
 import time
@@ -136,7 +141,6 @@ try:
         cv2.imshow("BlazeSense Fire Detection", frame_resized)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
 
 except KeyboardInterrupt:
     print("🛑 Gracefully shutting down.")

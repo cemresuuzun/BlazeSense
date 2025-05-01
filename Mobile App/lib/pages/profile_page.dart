@@ -14,7 +14,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
 
-  bool isLoading = true;
+  bool isLoading = false;
   bool isUpdating = false;
   String? errorMessage;
 
@@ -24,6 +24,7 @@ class _ProfilePageState extends State<ProfilePage> {
     fetchUserData();
   }
 
+  // Kullanıcı verilerini Supabase'ten çekme
   Future<void> fetchUserData() async {
     setState(() {
       isLoading = true;
@@ -50,6 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // Kullanıcı profilini güncelleme
   Future<void> updateProfile() async {
     final username = usernameController.text.trim();
     final phone = phoneController.text.trim();
@@ -78,7 +80,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Profile updated!'),
+          content: Text('Profile updated!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -91,6 +93,57 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // Kullanıcı bilgilerini göstermek için ikonlu widget
+  Widget _buildInfoCard(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF5F5F5), Color(0xFFF5F5F5)], // Kırmızı tonları gradient
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Color(0xFF555555), size: 30),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF555555),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Color(0xFF555555),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Modern giriş alanları
   Widget _buildField(String label, TextEditingController controller, IconData icon, TextInputType inputType) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -110,7 +163,7 @@ class _ProfilePageState extends State<ProfilePage> {
         keyboardType: inputType,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon),
+          prefixIcon: Icon(icon, color: const Color(0xFF333333)), // Kırmızı simge
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
           filled: true,
           fillColor: Colors.white,
@@ -131,51 +184,23 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: const Color(0xFFF4F4F4), // Hafif gri arka plan
       appBar: AppBar(
         title: const Text('My Profile'),
-        backgroundColor: const Color(0xFFFF0000),
+        backgroundColor: const Color(0xFF333333), // Kırmızı başlık
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Kullanıcı Bilgisi Kartı
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Color(0xFFFF0000),
-                    child: Icon(Icons.person, color: Colors.white, size: 30),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      usernameController.text.isEmpty
-                          ? 'Your Username'
-                          : usernameController.text,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            // Kullanıcı Bilgileri Kartı
+            _buildInfoCard(
+              'Username',
+              usernameController.text.isEmpty ? 'Your Username' : usernameController.text,
+              Icons.person,
+            ),
+            _buildInfoCard(
+              'Phone',
+              phoneController.text.isEmpty ? 'Your Phone Number' : phoneController.text,
+              Icons.phone,
             ),
 
             // Form Alanları
@@ -183,28 +208,53 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildField('Phone', phoneController, Icons.phone, TextInputType.phone),
 
             // Güncelle Butonu
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isUpdating ? null : updateProfile,
-                icon: isUpdating
-                    ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: isUpdating
+                  ? const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              )
+                  : GestureDetector(
+                onTap: updateProfile,
+                child: Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFFF6F61), Color(0xFFFF0000)], // Kırmızı tonları gradient
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                )
-                    : const Icon(Icons.save),
-                label: const Text('Update Profile'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF0000),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 4,
-                  shadowColor: Colors.black26,
+                  child: Center(
+                    child: isUpdating
+                        ? const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    )
+                        : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.save, color: Colors.white),
+                        SizedBox(width: 10),
+                        Text(
+                          'Update Profile',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

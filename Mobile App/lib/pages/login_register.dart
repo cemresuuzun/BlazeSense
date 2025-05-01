@@ -11,15 +11,11 @@ class LoginRegisterPage extends StatefulWidget {
   State<LoginRegisterPage> createState() => _LoginRegisterPageState();
 }
 
-
-
 class _LoginRegisterPageState extends State<LoginRegisterPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   bool isPasswordVisible = false;
-
-
   String? errorMessage;
   bool isLoading = false;
 
@@ -29,33 +25,104 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Forgot Your Password?"),
-          content: TextField(
-            controller: resetEmailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: "Enter your email",
-              border: OutlineInputBorder(),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+              maxWidth: MediaQuery.of(context).size.width * 0.85,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.email_rounded,
+                    size: 50,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Forgot Your Password?",
+                    textAlign: TextAlign.center, // Yazıyı ortaya aldık
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Enter your email address to reset your password.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: resetEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.black),
+                    decoration: const InputDecoration(
+                      labelText: "Email Address",
+                      labelStyle: TextStyle(color: Colors.black),
+                      prefixIcon: Icon(Icons.email, color: Colors.black),
+                      border: OutlineInputBorder(),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.black54),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.black),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      sendPasswordResetEmail(resetEmailController.text.trim());
+                    },
+                    child: const Text(
+                      "Send Reset Link",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                sendPasswordResetEmail(resetEmailController.text.trim());
-              },
-              child: const Text("Send Reset Link"),
-            ),
-          ],
         );
       },
     );
   }
+
+
 
 
   Future<void> sendPasswordResetEmail(String email) async {
@@ -72,7 +139,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
       setState(() => errorMessage = 'Unexpected error: $e');
     }
   }
-
 
   Future<void> signIn() async {
     final email = emailController.text.trim();

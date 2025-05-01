@@ -9,10 +9,9 @@ import 'package:flutterilk/pages/settings_page.dart';
 import 'package:flutterilk/notification/notification_service.dart';
 import 'package:flutterilk/service/auth.dart';
 import 'package:camera/camera.dart';
-import '../main.dart';
 import 'package:flutterilk/pages/ip_camera_view.dart';
-
-
+import 'package:flutterilk/pages/reset_password_page.dart';
+import 'package:uni_links/uni_links.dart'; // Deep link işlemleri için import
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -28,13 +27,73 @@ class _MainPageState extends State<MainPage> {
 
   final List<Widget> _pages = [
     IPCameraView(),
-    NotificationLogPage(key: notificationLogKey),
+    NotificationLogPage(),  // notificationLogKey'i kaldırdım
     const ChangeViewPage(),
     const DetectionLogsPage(),
     const SettingsPage(),
   ];
 
-  // Logout işlemi için onay isteyen fonksiyon
+  @override
+  void initState() {
+    super.initState();
+    listenToFireNotifications();
+    _initializeChannels();
+    _initDeepLink(); // Deep link için başlatma
+  }
+
+  // Deep link başlatma işlemi
+  void _initDeepLink() async {
+    try {
+      // İlk başta gelen link
+      final initialLink = await getInitialLink();
+      if (initialLink != null) {
+        _handleDeepLink(initialLink); // İlk gelen linki işle
+      }
+
+      // Uygulama açıkken gelen deep link'leri dinleme
+      linkStream.listen((String? link) {
+        if (link != null) {
+          _handleDeepLink(link); // Gelen linki işle
+        }
+      });
+    } catch (e) {
+      debugPrint('Error handling deep link: $e');
+    }
+  }
+
+  // Deep link işleme
+  void _handleDeepLink(String link) {
+    final uri = Uri.parse(link);
+    debugPrint('Deep Link URI: $uri');
+
+    if (uri.scheme == 'blazesense' && uri.host == 'reset-password') {
+      final refreshToken = uri.queryParameters['refresh_token'] ?? '';
+      debugPrint('Refresh Token: $refreshToken');
+
+      // Eğer refresh token varsa, ResetPasswordPage'e yönlendir
+      if (refreshToken.isNotEmpty && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ResetPasswordPage(refreshToken: refreshToken),
+            ),
+          );
+        });
+      }
+    }
+  }
+
+  // Supabase kanallarını başlatma
+  void _initializeChannels() {
+    detectionChannel = Supabase.instance.client.channel('detection_channel');
+    notificationChannel = Supabase.instance.client.channel('notification_channel');
+
+    detectionChannel.subscribe();
+    notificationChannel.subscribe();
+  }
+
+  // Uygulama içerisinde çıkış yapma işlemi
   Future<void> _handleLogout(BuildContext context) async {
     bool? confirm = await showDialog<bool>(
       context: context,
@@ -66,24 +125,14 @@ class _MainPageState extends State<MainPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-
-    listenToFireNotifications();
-
-    final supabase = Supabase.instance.client;
-  }
-
-  @override
   void dispose() {
-    Supabase.instance.client.removeChannel(detectionChannel);
-    Supabase.instance.client.removeChannel(notificationChannel);
+    detectionChannel.unsubscribe();
+    notificationChannel.unsubscribe();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    //  EKLENDİ: İkonlar ve label listeleri tanımlandı (daha okunabilir ve özelleştirilebilir yapı için)
     List<IconData> icons = [
       Icons.home,
       Icons.notifications,
@@ -101,22 +150,6 @@ class _MainPageState extends State<MainPage> {
     ];
 
     return Scaffold(
-      /*
-      appBar: AppBar(
-        title: Text(
-          AuthService().currentUser?.email ?? 'User',
-          style: const TextStyle(fontSize: 16),
-        ),
-        centerTitle: true, // ✅ Başlığı tam ortaya alır
-        actions: [
-          // 🔴 Logout butonu sağ köşeye alındı
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
-            onPressed: () =>
-                _handleLogout(context), // Çıkış yaparken onay sorulacak
-          ),
-        ],
-      ),*/
       body: _pages[_selectedIndex],
       bottomNavigationBar: Theme(
         data: Theme.of(context).copyWith(
@@ -131,52 +164,38 @@ class _MainPageState extends State<MainPage> {
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.white,
             currentIndex: _selectedIndex,
-            selectedItemColor: Color(0xFFFF0000),
+            selectedItemColor: const Color(0xFFFF0000),
             unselectedItemColor: Colors.black45,
             showUnselectedLabels: true,
-            selectedLabelStyle: const TextStyle(
-              fontSize: 12,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 12,
-            ),
-            onTap: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
+            selectedLabelStyle: const TextStyle(fontSize: 12),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            onTap: (index) => setState(() => _selectedIndex = index),
             items: List.generate(icons.length, (index) {
               if (index == 2) {
-                // Middle Add button with circle
                 return BottomNavigationBarItem(
                   icon: Container(
                     margin: const EdgeInsets.only(top: 11),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.grey.shade300, // Lighter than black45
+                      color: Colors.grey.shade300,
                     ),
-                    child: Icon(
-                      icons[index],
-                      size: 28,
-                      color: Colors.black, // You can customize this
-                    ),
+                    child: Icon(icons[index], size: 28, color: Colors.black),
                   ),
-                  label: '', // No label for the Add button
-                );
-              } else {
-                return BottomNavigationBarItem(
-                  icon: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 8),
-                      Icon(icons[index]),
-                      Container(height: 5),
-                    ],
-                  ),
-                  label: labels[index],
+                  label: '',
                 );
               }
+              return BottomNavigationBarItem(
+                icon: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 8),
+                    Icon(icons[index]),
+                    Container(height: 5),
+                  ],
+                ),
+                label: labels[index],
+              );
             }),
           ),
         ),
