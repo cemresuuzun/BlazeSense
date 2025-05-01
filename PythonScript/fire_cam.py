@@ -6,10 +6,36 @@
 import cv2
 from ultralytics import YOLO
 import time
-from config import USER_ID, CAMERA_ID, IP_CAMERA_URL,IP_CAMERA_URL1,ACCOUNT_SID,AUTH_TOKEN  # Updated: Supabase bağlantısı artık kullanılmadığı için gereksiz olanlar çıkarıldı
+from config import USER_ID, CAMERA_ID, IP_CAMERA_URL, IP_CAMERA_URL1, ACCOUNT_SID, AUTH_TOKEN  # Updated: Supabase bağlantısı artık kullanılmadığı için gereksiz olanlar çıkarıldı
 from datetime import datetime
 import requests
 from twilio.rest import Client  # Twilio import
+import os
+from collections import deque
+
+# === CLIP SAVING CONFIG ===
+PRE_SECONDS = 5
+POST_SECONDS = 5
+FPS = 20
+WIDTH, HEIGHT = 1280, 720
+VIDEO_DIR = "saved_clips"
+
+if not os.path.exists(VIDEO_DIR):
+    os.makedirs(VIDEO_DIR)
+
+frame_buffer = deque(maxlen=PRE_SECONDS * FPS)
+post_fire_frames = []
+fire_detected = False
+fire_frame_count = 0
+post_max_frames = POST_SECONDS * FPS
+
+def save_clip(frames, width, height):
+    filename = os.path.join(VIDEO_DIR, f"fire_clip_{int(time.time())}.mp4")
+    writer = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'XVID'), FPS, (width, height))
+    for frame in frames:
+        writer.write(frame)
+    writer.release()
+    print(f"✅ Fire clip saved: {filename}")
 
 # Twilio credentials
 twilio_client = Client(ACCOUNT_SID, AUTH_TOKEN)
@@ -63,7 +89,7 @@ def send_fire_notification_via_api(user_id, camera_id, message):
         print("⏳ 5 saniyelik bekleme süresi dolmadı.")
 
 # Load trained YOLOv8 model
-model = YOLO(r"C:\BlazeSense\BlazeSense\Yolo\best.pt")
+model = YOLO("Yolo/best.pt")
 
 # Open IP camera stream (RTSP protokolü)
 cap = cv2.VideoCapture(IP_CAMERA_URL1)
@@ -81,8 +107,12 @@ try:
             print("Failed to capture frame from IP camera")
             continue
 
+        # Resize for display & buffer
+        frame_resized = cv2.resize(frame, (WIDTH, HEIGHT))
+        frame_buffer.append(frame_resized.copy())
+
         # Perform YOLOv8 inference on the frame
-        results = model.predict(frame, conf=0.5)  # confidence threshold can be adjusted
+        results = model.predict(frame_resized, conf=0.5)  # confidence threshold can be adjusted
 
         # Draw detections on the frame
         for result in results:
@@ -94,15 +124,30 @@ try:
                 # Check if detected object is 'fire' (fire tek class olduğu için 0 olacak)
                 if cls == 0:
                     label = f"Fire: {conf:.2f}"
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)  # Red box for fire
-                    cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                    cv2.rectangle(frame_resized, (x1, y1), (x2, y2), (0, 0, 255), 3)  # Red box for fire
+                    cv2.putText(frame_resized, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX,
                                 0.5, (0, 0, 255), 2)
+
+                    # Eğer bu ilk yangınsa, buffer'ı başlat
+                    if not fire_detected:
+                        print("🚨 Fire detected! Saving last 10s and next 20s of video...")
+                        fire_detected = True
+                        fire_frame_count = 0
+                        post_fire_frames = list(frame_buffer)
 
                     # API üzerinden yangın bildirimi gönderimi (5 saniyelik gecikme var)
                     send_fire_notification_via_api(USER_ID, CAMERA_ID, "🔥 Fire detected by YOLO and sent by API!")
 
+        # Eğer yangın tespit edildiyse, post-fire frame'leri kaydet
+        if fire_detected:
+            post_fire_frames.append(frame_resized)
+            fire_frame_count += 1
+            if fire_frame_count >= post_max_frames:
+                fire_detected = False
+                save_clip(post_fire_frames, WIDTH, HEIGHT)
+                post_fire_frames.clear()
+
         # Display the frame with the detection results
-        frame_resized = cv2.resize(frame, (960, 540))  
         cv2.imshow("Fire Detection Camera Feed", frame_resized)
 
         # Wait for 1 ms for key press; if the user presses 'q', stop the video feed

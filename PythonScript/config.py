@@ -1,5 +1,6 @@
 SUPABASE_URL = "https://lxdxswcfjyxbiyofvwkt.supabase.co"  # Buraya kendi Supabase URL'ni yaz
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZHhzd2Nmanl4Yml5b2Z2d2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3Nzc1MjksImV4cCI6MjA1NzM1MzUyOX0.xMDumCcc9QssCQPR77PThnMFPltLbroiav7NNv9OsZA"
+SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZHhzd2Nmanl4Yml5b2Z2d2t0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTc3NzUyOSwiZXhwIjoyMDU3MzUzNTI5fQ.5q96uRSOxz5JmwbO2teg6piYEbejc8-OS-sl8cd9rVU"
 
 # Kullanıcı ID ve Kamera ID (Bu bilgileri Supabase'ten alman gerek)
 USER_ID = "2393b7ef-bb56-4594-8471-372444d37e6d"  # Gerçek user ID'yi buraya ekle
