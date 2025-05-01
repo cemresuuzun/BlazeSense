@@ -13,8 +13,6 @@ class AuthService {
     return await _client.auth.signInWithPassword(email: email, password: password);
   }
 
-
-
   // 🔓 Sign out user
   Future<void> signOut() async {
     await _client.auth.signOut();
@@ -27,8 +25,6 @@ class AuthService {
       password: password,
     );
   }
-
-
 
   // ✅ Get current user session
   User? get currentUser => _client.auth.currentUser;
