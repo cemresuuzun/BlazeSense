@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutterilk/pages/reset_password_page.dart'; // YENİ EKLENDİ
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutterilk/pages/main_page.dart';
 import 'package:flutterilk/pages/register_page.dart';
@@ -19,6 +20,33 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   String? errorMessage;
   bool isLoading = false;
 
+  // YENİ EKLENDİ - Şifre sıfırlama fonksiyonu (orijinal fonksiyonun yerine)
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      setState(() => isLoading = true);
+      await AuthService().sendPasswordResetEmail(email);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password reset code sent to your email')),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResetPasswordPage(email: email),
+        ),
+      );
+    } on AuthException catch (e) {
+      setState(() => errorMessage = e.message);
+    } catch (e) {
+      setState(() => errorMessage = 'Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  // Orijinal koda dokunulmadı - Sadece buton güncellendi
   void showForgotPasswordDialog(BuildContext context) {
     final TextEditingController resetEmailController = TextEditingController();
 
@@ -56,7 +84,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                   const SizedBox(height: 16),
                   const Text(
                     "Forgot Your Password?",
-                    textAlign: TextAlign.center, // Yazıyı ortaya aldık
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -101,12 +129,20 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: () {
+                    // YENİ EKLENDİ - Buton fonksiyonu güncellendi
+                    onPressed: () async {
+                      final email = resetEmailController.text.trim();
+                      if (email.isEmpty || !email.contains('@')) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a valid email')),
+                        );
+                        return;
+                      }
                       Navigator.pop(context);
-                      sendPasswordResetEmail(resetEmailController.text.trim());
+                      await sendPasswordResetEmail(email);
                     },
                     child: const Text(
-                      "Send Reset Link",
+                      "Send Reset Code",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -122,24 +158,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
     );
   }
 
-
-
-
-  Future<void> sendPasswordResetEmail(String email) async {
-    try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(email);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('📧 Password reset email sent!')),
-      );
-    } on AuthException catch (e) {
-      setState(() => errorMessage = e.message);
-    } catch (e) {
-      setState(() => errorMessage = 'Unexpected error: $e');
-    }
-  }
-
+  // Orijinal fonksiyonlar (değişmedi)
   Future<void> signIn() async {
     final email = emailController.text.trim();
     final password = passwordController.text;
@@ -170,6 +189,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
     }
   }
 
+  // Orijinal build metodu (değişmedi)
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -205,7 +225,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       style: TextStyle(fontSize: 16, color: Colors.black54),
                     ),
                     const SizedBox(height: 40),
-
                     TextField(
                       controller: emailController,
                       autofillHints: const [AutofillHints.email],
@@ -225,7 +244,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     TextField(
                       controller: passwordController,
                       obscureText: !isPasswordVisible,
@@ -256,9 +274,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
                     if (errorMessage != null)
                       Container(
                         padding: const EdgeInsets.all(10),
@@ -272,7 +288,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                           style: const TextStyle(color: Colors.red),
                         ),
                       ),
-
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
@@ -287,7 +302,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         ),
                       ),
                     ),
-
                     ElevatedButton(
                       onPressed: isLoading ? null : signIn,
                       style: ElevatedButton.styleFrom(
@@ -307,7 +321,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     TextButton(
                       onPressed: isLoading
                           ? null
