@@ -5,6 +5,7 @@ import 'package:flutterilk/pages/profile_page.dart';
 import 'package:flutterilk/pages/login_register.dart'; // LoginPage import
 import 'package:flutterilk/service/auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutterilk/pages/notification_preferences_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -19,11 +20,12 @@ class _SettingsPageState extends State<SettingsPage> {
   bool inAppNotifications = true;
 
   String username = '';
-  String avatarUrl = 'assets/batman.png';
+  String avatarUrl = 'assets/elcik.png';
 
   final List<String> avatarList = [
     'assets/batman.png',
     'assets/wonderwoman.png',
+    'assets/elcik.png',
   ];
 
   @override
@@ -124,7 +126,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: avatarList.map((avatar) {
                       return ListTile(
                         leading: Image.asset(avatar, width: 50, height: 50),
-                        title: Text(avatar.split('/').last.replaceAll('.png', '')),
+                        title:
+                            Text(avatar.split('/').last.replaceAll('.png', '')),
                         onTap: () {
                           Navigator.pop(context, avatar);
                         },
@@ -200,7 +203,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       backgroundColor: Colors.grey[200],
                       foregroundColor: Colors.black87,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -213,7 +217,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
                       elevation: 2,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -234,7 +239,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (context.mounted) {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const LoginRegisterPage()),
+                          MaterialPageRoute(
+                              builder: (context) => const LoginRegisterPage()),
                         );
                       }
                     },
@@ -250,35 +256,37 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildCard({
-    required String title,
-    required IconData icon,
+    String? title,
+    IconData? icon,
     required List<Widget> children,
   }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: const Color(0xFFFFFFFF),
-      elevation: 4,
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(icon, color: const Color(0xFF282828)),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF282828),
+            if (title != null && icon != null) ...[
+              Row(
+                children: [
+                  Icon(icon, color: const Color(0xFF282828)),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF282828),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
             ...children,
           ],
         ),
@@ -308,7 +316,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFDFD),
+      backgroundColor: const Color(0xFFF2F2F6),
       appBar: AppBar(
         title: const Text('Settings'),
         backgroundColor: const Color(0xFF282828),
@@ -316,7 +324,7 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => _handleLogout(context), // Show logout popup
+            onPressed: () => _handleLogout(context),
           ),
         ],
       ),
@@ -325,8 +333,6 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           children: [
             _buildCard(
-              title: 'User Information',
-              icon: Icons.person,
               children: [
                 Center(
                   child: Column(
@@ -353,52 +359,96 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 12),
                 _buildTile(
                     Icons.email, 'Email', user?.email ?? 'Not available'),
-                _buildTile(Icons.perm_identity, 'User ID',
-                    user?.id ?? 'Not available'),
-                ListTile(
-                  leading: const Icon(Icons.account_circle,
-                      color: Color(0xFF282828)),
-                  title: const Text('Edit Profile'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const ProfilePage()),
-                    );
-                  },
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const ProfilePage()),
+                        );
+                      },
+                      child: ListTile(
+                        leading: const Icon(Icons.account_circle,
+                            color: Color(0xFF282828)),
+                        title: const Text(
+                          'Edit Profile',
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-            _buildCard(
-              title: 'Notification Preferences',
-              icon: Icons.notifications_active,
-              children: [
-                _buildSwitchTile(
-                    'In-app Notifications',
-                    'Show alerts inside the app',
-                    inAppNotifications, (val) async {
-                  setState(() => inAppNotifications = val);
-                  await updateUserPreference('in_app_notifications', val);
-                }),
-              ],
-            ),
-            _buildCard(
-              title: 'About',
-              icon: Icons.info_outline,
-              children: [
-                ListTile(
-                  title: const Text('About This App'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AboutPage()),
-                    );
-                  },
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              color: const Color(0xFFFFFFFF),
+              elevation: 0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const NotificationPreferencesPage()),
+                      );
+                    },
+                    child: ListTile(
+                      leading: const Icon(Icons.notifications_active,
+                          color: Color(0xFF282828)),
+                      title: const Text(
+                        'Notification Settings',
+                        style: TextStyle(
+                          fontSize: 14,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    ),
+                  ),
                 ),
-              ],
+              ),
+            ),
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              color: const Color(0xFFFFFFFF),
+              elevation: 0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AboutPage()),
+                      );
+                    },
+                    child: ListTile(
+                      leading: const Icon(Icons.info_outline, color: Color(0xFF282828)),
+                      title: const Text(
+                        'About',
+                        style: TextStyle(
+                          fontSize: 14,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
