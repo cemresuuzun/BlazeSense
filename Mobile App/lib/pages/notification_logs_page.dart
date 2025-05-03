@@ -80,12 +80,16 @@ class NotificationLogPageState extends State<NotificationLogPage> {
       body: SafeArea(
         child: !_hasLoaded
             ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                children: [
-                  ..._localNotifications
-                      .map((notif) => _buildNotificationCard(notif)),
-                ],
-              ),
+            : RefreshIndicator(
+          onRefresh: fetchNotifications,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              ..._localNotifications
+                  .map((notif) => _buildNotificationCard(notif)),
+            ],
+          ),
+        ),
       ),
     );
   }
