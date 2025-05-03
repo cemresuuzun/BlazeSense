@@ -52,58 +52,63 @@ class _DetectionLogsPageState extends State<DetectionLogsPage> {
       ),
       body: !_hasLoaded
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _reviewedNotifs.length,
-              itemBuilder: (context, index) {
-                final data = _reviewedNotifs[index];
-                final timestamp = DateTime.parse(data['timestamp']);
-                final cameraName = data['ip_cameras']['name'] ?? 'CAM';
-                final dateString =
-                    "${timestamp.day.toString().padLeft(2, '0')}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.year}\n"
-                    "${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}";
+          : RefreshIndicator(
+        onRefresh: fetchReviewedNotifications,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: _reviewedNotifs.length,
+          itemBuilder: (context, index) {
+            final data = _reviewedNotifs[index];
+            final timestamp = DateTime.parse(data['timestamp']);
+            final cameraName = data['ip_cameras']['name'] ?? 'CAM';
+            final dateString =
+                "${timestamp.day.toString().padLeft(2, '0')}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.year}\n"
+                "${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}";
 
-                return Column(
-                  children: [
-                    ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 6),
-                      leading: const Icon(Icons.warning,
-                          color: Color(0xFFFF0000), size: 24),
-                      title: Text(
-                        "$cameraName  Fire reviewed",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      subtitle: Text(
-                        data['message'],
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      trailing: Text(
-                        dateString,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black45,
-                        ),
-                      ),
+            return Column(
+              children: [
+                ListTile(
+                  dense: true,
+                  contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  leading: const Icon(Icons.warning,
+                      color: Color(0xFFFF0000), size: 24),
+                  title: Text(
+                    "$cameraName  Fire reviewed",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
                     ),
-                    const Divider(
-                      height: 1,
-                      thickness: 0.7,
-                      color: Color(0xFFDDDDDD),
-                      indent: 16,
-                      endIndent: 16,
+                  ),
+                  subtitle: Text(
+                    data['message'],
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.black54,
                     ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                  trailing: Text(
+                    dateString,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black45,
+                    ),
+                  ),
+                ),
+                const Divider(
+                  height: 1,
+                  thickness: 0.7,
+                  color: Color(0xFFDDDDDD),
+                  indent: 16,
+                  endIndent: 16,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+
     );
   }
 }
