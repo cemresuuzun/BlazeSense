@@ -150,20 +150,13 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: TextField(
         controller: controller,
         keyboardType: inputType,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: const Color(0xFF333333)), // Kırmızı simge
+          prefixIcon: Icon(icon, color: const Color(0xFF333333)),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
           filled: true,
           fillColor: Colors.white,
@@ -181,28 +174,16 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F4F4), // Hafif gri arka plan
+      backgroundColor: const Color(0xFFF2F2F6),
       appBar: AppBar(
         title: const Text('My Profile'),
-        backgroundColor: const Color(0xFF333333), // Kırmızı başlık
+        backgroundColor: const Color(0xFF333333),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Kullanıcı Bilgileri Kartı
-            _buildInfoCard(
-              'Username',
-              usernameController.text.isEmpty ? 'Your Username' : usernameController.text,
-              Icons.person,
-            ),
-            _buildInfoCard(
-              'Phone',
-              phoneController.text.isEmpty ? 'Your Phone Number' : phoneController.text,
-              Icons.phone,
-            ),
-
             // Form Alanları
             _buildField('Username', usernameController, Icons.person, TextInputType.name),
             _buildField('Phone', phoneController, Icons.phone, TextInputType.phone),
@@ -212,7 +193,7 @@ class _ProfilePageState extends State<ProfilePage> {
               duration: const Duration(milliseconds: 300),
               child: isUpdating
                   ? const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF555555)),
               )
                   : GestureDetector(
                 onTap: updateProfile,
@@ -220,36 +201,25 @@ class _ProfilePageState extends State<ProfilePage> {
                   width: double.infinity,
                   height: 60,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFFF6F61), Color(0xFFFF0000)], // Kırmızı tonları gradient
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: Center(
                     child: isUpdating
                         ? const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF555555)),
                     )
                         : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
-                        Icon(Icons.save, color: Colors.white),
+                        Icon(Icons.save, color: Color(0xFF555555)),
                         SizedBox(width: 10),
                         Text(
                           'Update Profile',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            color: Colors.white,
+                            color: Color(0xFF555555),
                           ),
                         ),
                       ],
