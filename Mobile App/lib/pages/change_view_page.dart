@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutterilk/pages/manage_devices_page.dart';
 
@@ -19,6 +20,15 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
 
   bool isLoading = false;
   String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF282828),
+      statusBarIconBrightness: Brightness.light,
+    ));
+  }
 
   String constructRtspUrl(String username, String password, String ipAddress) {
     return "rtsp://$username:$password@$ipAddress:554/Streaming/Channels/101";
@@ -132,7 +142,7 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
       backgroundColor: const Color(0xFFF2F2F6),
       appBar: AppBar(
         title: const Text('Add Device'),
-        backgroundColor: const Color(0xFF333333),
+        backgroundColor: const Color(0xFF282828),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(

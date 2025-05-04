@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetectionLogsPage extends StatefulWidget {
@@ -15,6 +16,10 @@ class _DetectionLogsPageState extends State<DetectionLogsPage> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF282828),
+      statusBarIconBrightness: Brightness.light,
+    ));
     fetchReviewedNotifications();
   }
 

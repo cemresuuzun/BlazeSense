@@ -12,6 +12,7 @@ import 'package:flutterilk/notification/notification_service.dart';
 import 'package:flutterilk/service/auth.dart';
 import 'package:camera/camera.dart';
 import 'package:flutterilk/pages/device_notifier.dart';
+import 'package:flutter/services.dart';
 
 
 class MainPage extends StatefulWidget {
@@ -44,6 +45,10 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF282828),
+      statusBarIconBrightness: Brightness.light,
+    ));
     listenToFireNotifications();
     _initializeChannels();
     loadCameras();
@@ -51,7 +56,9 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _onDeviceChanged() {
-    loadCameras();
+    if (mounted) {
+      loadCameras();
+    }
   }
 
   @override
@@ -174,65 +181,63 @@ class _MainPageState extends State<MainPage> {
 
   Widget _buildCameraView() {
     if (isLoading) {
-      // Always show a single loading indicator when loading
       return const Center(child: CircularProgressIndicator());
     }
     if (cameras.isEmpty || currentCameraIndex >= cameras.length) {
-      // Only show the 'No cameras available' message, no extra space or buttons
       return Column(
         children: [
-          const SizedBox(height: 20),
           Container(
             height: MediaQuery.of(context).size.height * 0.4,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            color: Colors.black,
             child: const Center(
-              child: Text('No cameras available', style: TextStyle(color: Colors.white)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.videocam_off, color: Colors.white54, size: 48),
+                  SizedBox(height: 16),
+                  Text(
+                    'No cameras available',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  Text(
+                    'Add a camera to start monitoring',
+                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       );
     }
-    // Only show the camera view and controls if there are cameras
     return Column(
       children: [
-        const SizedBox(height: 20),
         Container(
           height: MediaQuery.of(context).size.height * 0.4,
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              children: [
-                SizedBox.expand(
-                  child: _videoPlayerController != null
-                      ? VlcPlayer(controller: _videoPlayerController!, aspectRatio: 16 / 9)
-                      : const Center(child: CircularProgressIndicator()),
-                ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      cameras[currentCameraIndex]['name'] ?? 'Camera',
-                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                    ),
+          color: Colors.black,
+          child: Stack(
+            children: [
+              SizedBox.expand(
+                child: _videoPlayerController != null
+                    ? VlcPlayer(controller: _videoPlayerController!, aspectRatio: 16 / 9)
+                    : const Center(child: CircularProgressIndicator()),
+              ),
+              Positioned(
+                top: 16,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    cameras[currentCameraIndex]['name'] ?? 'Camera',
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 40),
@@ -313,10 +318,53 @@ class _MainPageState extends State<MainPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F6),
-      body: SafeArea(
-        child: IndexedStack(
-          index: _selectedIndex,
-          children: [_buildCameraView(), ..._pages.sublist(1)],
+      body: Container(
+        color: _selectedIndex == 0 ? const Color(0xFF282828) : const Color(0xFFF2F2F6),
+        child: SafeArea(
+          child: Column(
+            children: [
+              if (_selectedIndex == 0)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'LIVE',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F2F6),
+                    borderRadius: _selectedIndex == 0
+                        ? const BorderRadius.vertical(top: Radius.circular(20))
+                        : null,
+                  ),
+                  child: IndexedStack(
+                    index: _selectedIndex,
+                    children: [_buildCameraView(), ..._pages.sublist(1)],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: Theme(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NotificationPreferencesPage extends StatefulWidget {
@@ -18,6 +19,10 @@ class _NotificationPreferencesPageState extends State<NotificationPreferencesPag
   @override
   void initState() {
     super.initState();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF282828),
+      statusBarIconBrightness: Brightness.light,
+    ));
     fetchUserPreferences();
   }
 
