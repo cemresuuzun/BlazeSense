@@ -28,8 +28,7 @@ class _DetectionLogsPageState extends State<DetectionLogsPage> {
 
     final response = await Supabase.instance.client
         .from('notifications')
-        .select(
-            'id, message, timestamp, ip_cameras!fk_notifications_camera(name)')
+        .select('id, message, timestamp, ip_cameras(id, name)')
         .eq('user_id', userId)
         .eq('is_reviewed', true)
         .order('timestamp', ascending: false)
