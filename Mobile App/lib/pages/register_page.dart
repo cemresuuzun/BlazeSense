@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutterilk/service/auth.dart';
 import 'package:flutter/services.dart';
+import 'package:flutterilk/service/auth.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
-
-  @override
-  State<RegisterPage> createState() => _RegisterPageState();
-}
-//Tel no için digit ayarlaması
 class TenDigitPhoneFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
 
     if (digits.startsWith('0')) {
@@ -30,21 +24,38 @@ class TenDigitPhoneFormatter extends TextInputFormatter {
   }
 }
 
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
+  @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
 
 class _RegisterPageState extends State<RegisterPage> {
-
   final _formKey = GlobalKey<FormState>();
-
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController activationKeyController = TextEditingController();
 
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
-
   String? errorMessage;
+
+  String _selectedCountryCode = '+90';
+  final List<String> _countryCodes = ['+90', '+1', '+44', '+49', '+33'];
+
+  Future<bool> isActivationKeyValid(String key) async {
+    final response = await Supabase.instance.client
+        .from('activation_key')
+        .select('id')
+        .eq('code', int.tryParse(key))
+        .maybeSingle();
+
+    return response != null;
+  }
 
   Future<void> createUser() async {
     if (!_formKey.currentState!.validate()) return;
@@ -56,8 +67,22 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    // Get activation key data from DB
+    final activationKey = await Supabase.instance.client
+        .from('activation_key')
+        .select()
+        .eq('code', int.tryParse(activationKeyController.text))
+        .maybeSingle();
+
+    if (activationKey == null) {
+      setState(() {
+        errorMessage = "Activation key is invalid";
+      });
+      return;
+    }
+
     try {
-      final response = await AuthService().createUser(
+      final response = await AuthService().signUp(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
@@ -65,19 +90,30 @@ class _RegisterPageState extends State<RegisterPage> {
       final user = response.user;
 
       if (user != null) {
+        final fullPhone =
+            '$_selectedCountryCode${phoneController.text.replaceAll(RegExp(r'\\D'), '')}';
+
+        // ✅ Insert user with activation_key_id
         await Supabase.instance.client.from('users').insert({
           'id': user.id,
           'email': emailController.text.trim(),
           'username': usernameController.text.trim(),
-          'phone': phoneController.text.trim(),
+          'phone': fullPhone,
+          'activation_key_id': activationKey['id'], // ⭐️ key added here
           'created_at': DateTime.now().toIso8601String(),
+        });
+
+        // ✅ Insert to activation_key_users table
+        await Supabase.instance.client.from('activation_key_users').insert({
+          'activation_key_id': activationKey['id'],
+          'user_id': user.id,
         });
 
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🎉 Registered successfully!'),
+            content: Text('\u{1F389} Registered successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -87,10 +123,8 @@ class _RegisterPageState extends State<RegisterPage> {
           errorMessage = "Registration failed.";
         });
       }
-
     } on PostgrestException catch (e) {
       final combined = '${e.message ?? ''} ${e.details ?? ''}';
-
       final errors = <String>[];
 
       if (combined.contains('users_email_key')) {
@@ -110,7 +144,6 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         errorMessage = errors.join('\n');
       });
-
     } on AuthException catch (e) {
       setState(() => errorMessage = e.message);
     } catch (e) {
@@ -156,12 +189,62 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       validator: validator,
-      inputFormatters: keyboardType == TextInputType.phone
-          ? [TenDigitPhoneFormatter()]
-          : [],
     );
   }
 
+  Widget buildPhoneInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedCountryCode,
+                  items: _countryCodes
+                      .map((code) => DropdownMenuItem(value: code, child: Text(code)))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCountryCode = value!;
+                    });
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                inputFormatters: [TenDigitPhoneFormatter()],
+                decoration: const InputDecoration(
+                  hintText: '5XX XXX XXXX',
+                  counterText: '',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final digits = value?.replaceAll(RegExp(r'\D'), '') ?? '';
+                  if (digits.length != 10) {
+                    return 'Enter a valid 10-digit phone number';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,9 +266,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   label: "Username",
                   controller: usernameController,
                   icon: Icons.person,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Username is required'
-                      : null,
+                  validator: (value) =>
+                  value == null || value.isEmpty ? 'Username is required' : null,
                 ),
                 const SizedBox(height: 20),
                 buildInput(
@@ -195,37 +277,26 @@ class _RegisterPageState extends State<RegisterPage> {
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'Email is required';
-
-                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                    if (!emailRegex.hasMatch(value)) return 'Please enter a valid email address';
-
+                    final emailRegex =
+                    RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                    if (!emailRegex.hasMatch(value)) return 'Enter a valid email address';
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
+                buildPhoneInput(),
+                const SizedBox(height: 20),
                 buildInput(
-                  label: "Phone",
-                  controller: phoneController,
-                  icon: Icons.phone,
-                  keyboardType: TextInputType.phone,
+                  label: "Activation Key",
+                  controller: activationKeyController,
+                  icon: Icons.vpn_key,
+                  keyboardType: TextInputType.number,
                   validator: (value) {
-
                     if (value == null || value.isEmpty) {
-                      return 'Phone number is required';
+                      return 'Activation key is required';
                     }
-
-                    String cleaned = value.trim();
-                    if (cleaned.startsWith('0')) {
-                      cleaned = cleaned.substring(1);
-                    }
-
-                    if (cleaned.length != 10 || !RegExp(r'^\d{10}$').hasMatch(cleaned)) {
-                      return 'Enter a valid 10-digit phone number';
-                    }
-
                     return null;
                   },
-
                 ),
                 const SizedBox(height: 20),
                 buildInput(
@@ -256,21 +327,14 @@ class _RegisterPageState extends State<RegisterPage> {
                     });
                   },
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (value != passwordController.text) {
-                      return 'Passwords do not match';
-                    }
+                    if (value == null || value.isEmpty) return 'Please confirm your password';
+                    if (value != passwordController.text) return 'Passwords do not match';
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
                 if (errorMessage != null)
-                  Text(
-                    errorMessage!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                  Text(errorMessage!, style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: createUser,

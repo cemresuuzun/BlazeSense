@@ -21,32 +21,67 @@ class NotificationLogPageState extends State<NotificationLogPage> {
   }
 
   Future<void> fetchNotifications() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final user = Supabase.instance.client.auth.currentUser;
 
-    if (userId == null || userId.isEmpty) {
+    if (user == null) {
       if (!mounted) return;
-      setState(() {
-        _hasLoaded = true;
-      });
+      setState(() => _hasLoaded = true);
       return;
     }
 
-    final response = await Supabase.instance.client
-        .from('notifications')
-        .select('id, message, timestamp, is_reviewed, ip_cameras(id, name)')
-        .eq('user_id', userId)
-        .eq('is_reviewed', false)
-        .order('timestamp', ascending: false)
-        .execute();
+    try {
+      // 1. Get activation_key_id from users table
+      final userRow = await Supabase.instance.client
+          .from('users')
+          .select('activation_key_id')
+          .eq('id', user.id)
+          .single();
 
-    if (!mounted) return;
+      final activationKeyId = userRow['activation_key_id'];
+      if (activationKeyId == null) throw Exception('No activation key found');
 
-    setState(() {
-      _localNotifications =
-      List<Map<String, dynamic>>.from(response.data ?? []);
-      _hasLoaded = true;
-    });
+      // 2. Fetch all cameras tied to that key
+      final cameraRows = await Supabase.instance.client
+          .from('ip_cameras')
+          .select('id')
+          .eq('activation_key_id', activationKeyId);
+
+      final cameraIds = cameraRows.map((cam) => cam['id']).toList();
+
+      if (cameraIds.isEmpty) {
+        setState(() {
+          _localNotifications = [];
+          _hasLoaded = true;
+        });
+        return;
+      }
+
+      // 3. Fetch notifications for those camera IDs
+      final response = await Supabase.instance.client
+          .from('notifications')
+          .select('id, message, timestamp, is_reviewed, ip_cameras(id, name)')
+          .in_('camera_id', cameraIds)
+          .eq('is_reviewed', false)
+          .order('timestamp', ascending: false);
+
+
+      if (!mounted) return;
+
+      setState(() {
+        _localNotifications =
+        List<Map<String, dynamic>>.from(response);
+        _hasLoaded = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _hasLoaded = true;
+        _localNotifications = [];
+      });
+      print("❌ Error fetching notifications: $e");
+    }
   }
+
 
 
   void addNotificationToUI({

@@ -6,7 +6,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutterilk/pages/login_register.dart';
 import 'package:flutterilk/pages/main_page.dart';
 import 'package:flutterilk/notification/notification_service.dart';
-import 'package:flutterilk/notification/notification_service.dart';
 
 
 //notification widget herhangi bir yerde açılabilsin diye eklenen navigator variable

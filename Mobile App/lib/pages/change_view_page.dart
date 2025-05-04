@@ -67,15 +67,29 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
     });
 
     try {
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) throw Exception('User not logged in');
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
 
-      // Check camera count
+      // 🎯 Fetch activation key ID
+      final activationKeyRow = await supabase
+          .from('users')
+          .select('activation_key_id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (activationKeyRow == null || activationKeyRow['activation_key_id'] == null) {
+        throw Exception('Activation key not found');
+      }
+
+      final activationKeyId = activationKeyRow['activation_key_id'];
+
+      // 🎯 Check camera count for this activation key
       final cameras = await supabase
           .from('ip_cameras')
           .select('id')
-          .eq('user_id', userId);
-      if (cameras != null && cameras.length >= 5) {
+          .eq('activation_key_id', activationKeyId);
+
+      if (cameras.length >= 5) {
         setState(() {
           errorMessage = 'You can only add up to 5 cameras.';
         });
@@ -84,16 +98,17 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
 
       final rtspUrl = constructRtspUrl(username, password, camIp);
 
-      // Save to Supabase ip_cameras table
+      // ✅ Insert new camera
       await supabase.from('ip_cameras').insert({
-        'user_id': userId,
+        'activation_key_id': activationKeyId,
+        'user_id': user.id,
         'name': cameraName,
         'ip_address': rtspUrl,
+
       });
 
       if (!mounted) return;
-      
-      // Show success message
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Camera added successfully!'),
@@ -101,7 +116,6 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
         ),
       );
 
-      // Navigate back to main page and clear navigation stack
       Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     } catch (e) {
       setState(() {
@@ -145,23 +159,23 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
                 child: Center(
                   child: isLoading
                       ? const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF555555)),
-                        )
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF555555)),
+                  )
                       : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.add_circle_outline, color: Color(0xFF555555)),
-                            SizedBox(width: 10),
-                            Text(
-                              'Add Device',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Color(0xFF555555),
-                              ),
-                            ),
-                          ],
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.add_circle_outline, color: Color(0xFF555555)),
+                      SizedBox(width: 10),
+                      Text(
+                        'Add Device',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Color(0xFF555555),
                         ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -226,4 +240,4 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
       ),
     );
   }
-} 
+}

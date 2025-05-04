@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutterilk/pages/reset_password_page.dart'; // YENİ EKLENDİ
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutterilk/pages/reset_password_page.dart';
 import 'package:flutterilk/pages/main_page.dart';
 import 'package:flutterilk/pages/register_page.dart';
 import '../service/auth.dart';
@@ -20,7 +20,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   String? errorMessage;
   bool isLoading = false;
 
-  // YENİ EKLENDİ - Şifre sıfırlama fonksiyonu (orijinal fonksiyonun yerine)
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       setState(() => isLoading = true);
@@ -33,9 +32,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
 
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => ResetPasswordPage(email: email),
-        ),
+        MaterialPageRoute(builder: (_) => ResetPasswordPage(email: email)),
       );
     } on AuthException catch (e) {
       setState(() => errorMessage = e.message);
@@ -46,7 +43,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
     }
   }
 
-  // Orijinal koda dokunulmadı - Sadece buton güncellendi
   void showForgotPasswordDialog(BuildContext context) {
     final TextEditingController resetEmailController = TextEditingController();
 
@@ -68,37 +64,22 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 ),
               ],
             ),
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.6,
-              maxWidth: MediaQuery.of(context).size.width * 0.85,
-            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.email_rounded,
-                    size: 50,
-                    color: Colors.red,
-                  ),
+                  const Icon(Icons.email_rounded, size: 50, color: Colors.red),
                   const SizedBox(height: 16),
                   const Text(
                     "Forgot Your Password?",
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   const SizedBox(height: 10),
                   const Text(
                     "Enter your email address to reset your password.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -110,12 +91,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       labelStyle: TextStyle(color: Colors.black),
                       prefixIcon: Icon(Icons.email, color: Colors.black),
                       border: OutlineInputBorder(),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.black54),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.black),
-                      ),
+                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black54)),
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -125,11 +102,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       foregroundColor: Colors.white,
                       elevation: 2,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    // YENİ EKLENDİ - Buton fonksiyonu güncellendi
                     onPressed: () async {
                       final email = resetEmailController.text.trim();
                       if (email.isEmpty || !email.contains('@')) {
@@ -141,13 +115,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       Navigator.pop(context);
                       await sendPasswordResetEmail(email);
                     },
-                    child: const Text(
-                      "Send Reset Code",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text("Send Reset Code", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -158,14 +126,13 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
     );
   }
 
-  // Orijinal fonksiyonlar (değişmedi)
   Future<void> signIn() async {
     final email = emailController.text.trim();
     final password = passwordController.text;
 
     setState(() {
-      errorMessage = null;
       isLoading = true;
+      errorMessage = null;
     });
 
     try {
@@ -173,23 +140,48 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
       final response = await auth.signIn(email: email, password: password);
 
       if (response.user != null && mounted) {
+        final userId = response.user!.id;
+
+        final userData = await Supabase.instance.client
+            .from('users')
+            .select('activation_key_id')
+            .eq('id', userId)
+            .maybeSingle();
+
+        final activationKeyId = userData?['activation_key_id'];
+
+        if (activationKeyId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No activation key linked to this account.'), backgroundColor: Colors.red),
+          );
+          return;
+        }
+
+        // ✅ Notify the backend of activation key
+        await auth.notifyBackendWithActivationKey(activationKeyId);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainPage()),
         );
       } else {
-        setState(() => errorMessage = 'Login failed. Please try again.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.'), backgroundColor: Colors.red),
+        );
       }
     } on AuthException catch (e) {
-      setState(() => errorMessage = e.message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
     } catch (e) {
-      setState(() => errorMessage = 'Unexpected error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unexpected error: $e'), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
 
-  // Orijinal build metodu (değişmedi)
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -204,30 +196,15 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/LogoApp.png',
-                      height: 200,
-                      fit: BoxFit.scaleDown,
-                    ),
+                    Image.asset('assets/LogoApp.png', height: 200, fit: BoxFit.scaleDown),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Blaze Sense',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: 2,
-                      ),
-                    ),
+                    const Text('Blaze Sense',
+                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black, letterSpacing: 2)),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Fire Detection System',
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
+                    const Text('Fire Detection System', style: TextStyle(fontSize: 16, color: Colors.black54)),
                     const SizedBox(height: 40),
                     TextField(
                       controller: emailController,
-                      autofillHints: const [AutofillHints.email],
                       keyboardType: TextInputType.emailAddress,
                       style: const TextStyle(color: Colors.black),
                       decoration: const InputDecoration(
@@ -235,19 +212,14 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         labelStyle: TextStyle(color: Colors.black),
                         prefixIcon: Icon(Icons.email, color: Colors.black),
                         border: OutlineInputBorder(),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black54),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black),
-                        ),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black54)),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
                       ),
                     ),
                     const SizedBox(height: 20),
                     TextField(
                       controller: passwordController,
                       obscureText: !isPasswordVisible,
-                      autofillHints: const [AutofillHints.password],
                       onSubmitted: (_) => signIn(),
                       style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
@@ -255,23 +227,12 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         labelStyle: const TextStyle(color: Colors.black),
                         prefixIcon: const Icon(Icons.lock, color: Colors.black),
                         suffixIcon: IconButton(
-                          icon: Icon(
-                            isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.black,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              isPasswordVisible = !isPasswordVisible;
-                            });
-                          },
+                          icon: Icon(isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.black),
+                          onPressed: () => setState(() => isPasswordVisible = !isPasswordVisible),
                         ),
                         border: const OutlineInputBorder(),
-                        enabledBorder: const OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black54),
-                        ),
-                        focusedBorder: const OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black),
-                        ),
+                        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.black54)),
+                        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -283,10 +244,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          errorMessage!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
+                        child: Text(errorMessage!, style: const TextStyle(color: Colors.red)),
                       ),
                     Align(
                       alignment: Alignment.centerRight,
@@ -294,11 +252,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         onPressed: () => showForgotPasswordDialog(context),
                         child: const Text(
                           "Forgot Password?",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black,
-                            decoration: TextDecoration.underline,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.black, decoration: TextDecoration.underline),
                         ),
                       ),
                     ),
@@ -309,26 +263,18 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         backgroundColor: const Color(0xFFFF0000),
                         foregroundColor: Colors.white,
                         elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       child: isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                          : const Text("Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 20),
                     TextButton(
                       onPressed: isLoading
                           ? null
                           : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const RegisterPage()),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
                       },
                       style: TextButton.styleFrom(foregroundColor: Colors.black),
                       child: const Text(

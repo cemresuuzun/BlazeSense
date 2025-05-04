@@ -28,14 +28,28 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
       isLoading = true;
       errorMessage = null;
     });
+
     try {
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) throw Exception('User not logged in');
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      // Step 1: Fetch activation_key_id from users table
+      final userData = await supabase
+          .from('users')
+          .select('activation_key_id')
+          .eq('id', user.id)
+          .single();
+
+      final activationKeyId = userData['activation_key_id'];
+      if (activationKeyId == null) throw Exception('User has no activation key assigned');
+
+      // Step 2: Fetch devices by activation_key_id
       final response = await supabase
           .from('ip_cameras')
           .select()
-          .eq('user_id', userId)
+          .eq('activation_key_id', activationKeyId)
           .order('created_at');
+
       devices = (response as List).cast<Map<String, dynamic>>();
     } catch (e) {
       errorMessage = 'Failed to load devices: $e';
@@ -45,6 +59,7 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
       });
     }
   }
+
 
   Future<void> deleteDevice(int index) async {
     final device = devices[index];

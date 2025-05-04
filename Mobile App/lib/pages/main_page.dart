@@ -11,7 +11,6 @@ import 'package:flutterilk/pages/settings_page.dart';
 import 'package:flutterilk/notification/notification_service.dart';
 import 'package:flutterilk/service/auth.dart';
 import 'package:camera/camera.dart';
-import 'package:flutterilk/pages/ip_camera_view.dart';
 import 'package:flutterilk/pages/device_notifier.dart';
 
 
@@ -79,13 +78,24 @@ class _MainPageState extends State<MainPage> {
         errorMessage = null;
       });
 
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) throw Exception('User not logged in');
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
 
+      // Step 1: Get activation_key_id from users table
+      final userRow = await supabase
+          .from('users')
+          .select('activation_key_id')
+          .eq('id', user.id)
+          .single();
+
+      final activationKeyId = userRow['activation_key_id'];
+      if (activationKeyId == null) throw Exception('No activation key found');
+
+      // Step 2: Fetch cameras by activation_key_id
       final response = await supabase
           .from('ip_cameras')
           .select()
-          .eq('user_id', userId)
+          .eq('activation_key_id', activationKeyId)
           .order('created_at');
 
       final newCameras = (response as List).cast<Map<String, dynamic>>();
@@ -115,6 +125,7 @@ class _MainPageState extends State<MainPage> {
       });
     }
   }
+
 
   Future<void> initializePlayer(int index) async {
     if (cameras.isEmpty || index >= cameras.length) return;

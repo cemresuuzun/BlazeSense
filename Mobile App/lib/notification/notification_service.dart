@@ -19,11 +19,20 @@ void listenToFireNotifications() {
       schema: 'public',
       table: 'notifications',
     ),
-        (payload, [ref]) {
+        (payload, [ref]) async {
       final newNotification = payload['new'] as Map<String, dynamic>;
-      final message = newNotification['message'] ?? 'New fire alert';
-      print("🔥 New notification received: $message");
-      showFireNotification(newNotification); // pass the entire object
+
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) return;
+
+      // ✅ Filter for this user only
+      if (newNotification['user_id'] == currentUser.id) {
+        final message = newNotification['message'] ?? 'New fire alert';
+        print("🔥 New notification received for this user: $message");
+        showFireNotification(newNotification);
+      } else {
+        print("🙅 Notification is not for this user. Ignored.");
+      }
     },
   )
       .subscribe();
@@ -87,14 +96,14 @@ Future<void> showFireNotification(Map<String, dynamic> notification) async {
             ),
             TextButton(
               onPressed: () async {
-                //  Mark notification as reviewed
+                // ✅ Mark notification as reviewed
                 await Supabase.instance.client
                     .from('notifications')
                     .update({'is_reviewed': true})
                     .eq('id', notification['id'])
                     .execute();
 
-                //  Log into detection_log
+                // ✅ Log into detection_log
                 await Supabase.instance.client.from('detection_log').insert({
                   'user_id': user.id,
                   'camera_id': notification['camera_id'],
@@ -115,6 +124,7 @@ Future<void> showFireNotification(Map<String, dynamic> notification) async {
   }
 }
 
+// Update user notification preference
 Future<void> updateUserPreference(String key, bool value) async {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return;
