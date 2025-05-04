@@ -51,37 +51,121 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
     final deviceId = device['id'];
     try {
       await supabase.from('ip_cameras').delete().eq('id', deviceId);
+      setState(() {
+        devices.removeAt(index);
+      });
       deviceChangeNotifier.value++;
       if (widget.onDevicesChanged != null) {
         widget.onDevicesChanged!();
       }
-      Navigator.of(context).pop(true);
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Device deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate back to main page
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete device: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete device: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
   void confirmDelete(int index) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Device'),
-        content: const Text('Are you sure you want to delete this device?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 28,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Delete Device',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Are you sure you want to delete this device?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.grey[200],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        deleteDevice(index);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await deleteDevice(index);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -91,7 +175,7 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Devices'),
-        backgroundColor: const Color(0xFF333333),
+        backgroundColor: const Color(0xFF282828),
         foregroundColor: Colors.white,
       ),
       backgroundColor: const Color(0xFFF2F2F6),

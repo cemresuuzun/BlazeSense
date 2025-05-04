@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutterilk/pages/about_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutterilk/pages/profile_page.dart';
@@ -31,6 +32,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF282828),
+      statusBarIconBrightness: Brightness.light,
+    ));
     fetchUserPreferences();
     fetchUsername();
   }
