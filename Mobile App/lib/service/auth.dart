@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
   final SupabaseClient _client = Supabase.instance.client;
-  final String backendBaseUrl = "http://192.168.1.102:8000"; // Change if deployed
+  final String backendBaseUrl = "http://localhost:8000"; // Change if deployed
 
   // ✅ Sign Up
   Future<AuthResponse> signUp({required String email, required String password}) async {
@@ -26,20 +26,42 @@ class AuthService {
       final userId = response.user!.id;
 
       // Step 1: Fetch activation key from Supabase
-      final userData = await _client
-          .from('users')
-          .select('activation_key_id')
-          .eq('id', userId)
-          .maybeSingle();
+      try {
+        print("🔍 Fetching activation key for userId: $userId");
 
-      final activationKeyId = userData?['activation_key_id'];
-      if (activationKeyId == null) {
-        print("❌ User has no activation_key_id.");
-        return response;
+        final userData = await _client
+            .from('users')
+            .select('activation_key_id')
+            .eq('id', userId)
+            .maybeSingle()
+            .timeout(const Duration(seconds: 10), onTimeout: () {
+          throw Exception("🔥 Supabase query timeout");
+        });
+
+        final activationKeyId = userData?['activation_key_id'];
+        if (activationKeyId == null) {
+          print("❌ User has no activation_key_id.");
+          return response;
+        }
+
+        // Step 2: Notify Python backend
+        try {
+          print("📡 Notifying backend with activationKeyId: $activationKeyId");
+          await notifyBackendWithActivationKey(activationKeyId).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception("🚨 Backend notification timed out");
+            },
+          );
+        } catch (e) {
+          print("⚠️ Could not notify backend: $e");
+          // Optionally: Show error or let user proceed anyway
+        }
+
+      } catch (e) {
+        print("❌ Failed to fetch user data or notify backend: $e");
+        // Optional: You can throw here or allow login to continue
       }
-
-      // Step 2: Notify Python API
-      await notifyBackendWithActivationKey(activationKeyId);
     }
 
     return response;

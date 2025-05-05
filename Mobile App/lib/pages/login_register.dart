@@ -142,11 +142,14 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
       if (response.user != null && mounted) {
         final userId = response.user!.id;
 
+        print("⏳ Fetching userData for userId: $userId");
         final userData = await Supabase.instance.client
             .from('users')
             .select('activation_key_id')
             .eq('id', userId)
             .maybeSingle();
+        print("✅ userData: $userData");
+
 
         final activationKeyId = userData?['activation_key_id'];
 
