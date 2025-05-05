@@ -17,8 +17,9 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   final TextEditingController passwordController = TextEditingController();
 
   bool isPasswordVisible = false;
-  String? errorMessage;
   bool isLoading = false;
+  String? emailError;
+  String? passwordError;
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
@@ -35,9 +36,13 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
         MaterialPageRoute(builder: (_) => ResetPasswordPage(email: email)),
       );
     } on AuthException catch (e) {
-      setState(() => errorMessage = e.message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
     } catch (e) {
-      setState(() => errorMessage = 'Error: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -68,7 +73,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.email_rounded, size: 50, color: Colors.red),
+                  const Icon(Icons.email_rounded, size: 50, color: Colors.black87),
                   const SizedBox(height: 16),
                   const Text(
                     "Forgot Your Password?",
@@ -132,8 +137,18 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
 
     setState(() {
       isLoading = true;
-      errorMessage = null;
+      emailError = null;
+      passwordError = null;
     });
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        if (email.isEmpty) emailError = 'Email is required';
+        if (password.isEmpty) passwordError = 'Password is required';
+        isLoading = false;
+      });
+      return;
+    }
 
     try {
       final auth = AuthService();
@@ -157,7 +172,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
           return;
         }
 
-        // ✅ Notify the backend of activation key
         await auth.notifyBackendWithActivationKey(activationKeyId);
 
         Navigator.pushReplacement(
@@ -165,14 +179,16 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
           MaterialPageRoute(builder: (_) => const MainPage()),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Please try again.'), backgroundColor: Colors.red),
-        );
+        setState(() {
+          emailError = 'Wrong email or password';
+          passwordError = 'Wrong email or password';
+        });
       }
-    } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
+    } on AuthException catch (_) {
+      setState(() {
+        emailError = 'Wrong email or password';
+        passwordError = 'Wrong email or password';
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Unexpected error: $e'), backgroundColor: Colors.red),
@@ -203,20 +219,25 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                     const SizedBox(height: 8),
                     const Text('Fire Detection System', style: TextStyle(fontSize: 16, color: Colors.black54)),
                     const SizedBox(height: 40),
+
+                    /// Email Field
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       style: const TextStyle(color: Colors.black),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: "Email",
-                        labelStyle: TextStyle(color: Colors.black),
-                        prefixIcon: Icon(Icons.email, color: Colors.black),
-                        border: OutlineInputBorder(),
-                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black54)),
-                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                        labelStyle: const TextStyle(color: Colors.black),
+                        prefixIcon: const Icon(Icons.email, color: Colors.black),
+                        border: const OutlineInputBorder(),
+                        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.black54)),
+                        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                        errorText: emailError,
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    /// Password Field
                     TextField(
                       controller: passwordController,
                       obscureText: !isPasswordVisible,
@@ -233,19 +254,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         border: const OutlineInputBorder(),
                         enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.black54)),
                         focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                        errorText: passwordError,
                       ),
                     ),
+
                     const SizedBox(height: 10),
-                    if (errorMessage != null)
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(errorMessage!, style: const TextStyle(color: Colors.red)),
-                      ),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
@@ -256,6 +269,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         ),
                       ),
                     ),
+
+                    /// Login Button
                     ElevatedButton(
                       onPressed: isLoading ? null : signIn,
                       style: ElevatedButton.styleFrom(
@@ -269,6 +284,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text("Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
+
                     const SizedBox(height: 20),
                     TextButton(
                       onPressed: isLoading

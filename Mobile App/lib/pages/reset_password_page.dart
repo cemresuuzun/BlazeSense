@@ -16,36 +16,55 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   bool _isLoading = false;
-  String? _errorMessage;
+
+  String? _codeError;
+  String? _passwordError;
+  String? _confirmPasswordError;
+
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
+
+  bool _isValidPassword(String password) {
+    final regex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$');
+    final hasWhitespace = password.contains(RegExp(r'\s'));
+    return regex.hasMatch(password) && !hasWhitespace;
+  }
 
   Future<void> _resetPassword() async {
-    if (_codeController.text.isEmpty) {
-      setState(() => _errorMessage = 'Password must be at least 6 characters');
-      return;
-    }
-
-    if (_passwordController.text.length < 6) {
-      setState(() => _errorMessage = 'Şifre en az 6 karakter olmalıdır');
-      return;
-    }
-
-    if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() => _errorMessage = 'Passwords do not match');
-      return;
-    }
+    final code = _codeController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
 
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _codeError = null;
+      _passwordError = null;
+      _confirmPasswordError = null;
     });
 
+    if (code.isEmpty) {
+      setState(() => _codeError = 'Verification code is required');
+      return;
+    }
+
+    if (!_isValidPassword(password)) {
+      setState(() => _passwordError = 'Password must be at least 6 characters,\ninclude uppercase, lowercase, number,\nand no spaces');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      setState(() => _confirmPasswordError = 'Passwords do not match');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
-      // YENİ AUTH SERVICE'E UYGUN ÇAĞRI
       await AuthService().updatePasswordWithToken(
-        email: widget.email, // Sayfadan gelen email
-        token: _codeController.text.trim(),
-        newPassword: _passwordController.text,
+        email: widget.email,
+        token: code,
+        newPassword: password,
       );
 
       if (!mounted) return;
@@ -59,15 +78,23 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             (route) => false,
       );
     } on AuthException catch (e) {
-      setState(() => _errorMessage = _getErrorMessage(e.message));
+      final msg = _getErrorMessage(e.message);
+      if (msg.contains('Invalid')) {
+        setState(() => _codeError = msg);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
     } catch (e) {
-      setState(() => _errorMessage = 'Error: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unexpected error: $e'), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Hata mesajlarını Türkçeleştirme
   String _getErrorMessage(String message) {
     if (message.contains('Invalid token')) return 'Invalid or expired code';
     if (message.contains('User not found')) return 'User not found';
@@ -90,54 +117,73 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Enter the 6-digit code sent to ${widget.email} ',
+              'Enter the 6-digit code sent to ${widget.email}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 30),
+
             TextField(
               controller: _codeController,
-              decoration: const InputDecoration(
-                labelText: 'Verificaiton Code',
+              decoration: InputDecoration(
+                labelText: 'Verification Code',
                 hintText: '123456',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.sms,color: Colors.black),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.sms, color: Colors.black),
+                errorText: _codeError,
               ),
               keyboardType: TextInputType.number,
               maxLength: 6,
             ),
             const SizedBox(height: 20),
+
             TextField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: !_showPassword,
+              decoration: InputDecoration(
                 labelText: 'New Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock, color: Colors.black),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.lock, color: Colors.black),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showPassword = !_showPassword;
+                    });
+                  },
+                ),
+                errorText: _passwordError,
               ),
             ),
             const SizedBox(height: 15),
+
             TextField(
               controller: _confirmPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Verify Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.verified, color: Colors.black),
-              ),
+              obscureText: !_showConfirmPassword,
               onSubmitted: (_) => _resetPassword(),
-            ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 15),
-              Text(
-                _errorMessage!,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                  fontSize: 16,
+              decoration: InputDecoration(
+                labelText: 'Verify Password',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.verified, color: Colors.black),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showConfirmPassword = !_showConfirmPassword;
+                    });
+                  },
                 ),
-                textAlign: TextAlign.center,
+                errorText: _confirmPasswordError,
               ),
-            ],
+            ),
+
             const SizedBox(height: 25),
+
             ElevatedButton(
               onPressed: _isLoading ? null : _resetPassword,
               style: ElevatedButton.styleFrom(
@@ -151,7 +197,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                 'Reset Password',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,color: Colors.white,),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
           ],

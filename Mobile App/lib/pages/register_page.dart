@@ -67,7 +67,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Get activation key data from DB
     final activationKey = await Supabase.instance.client
         .from('activation_key')
         .select()
@@ -91,19 +90,17 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (user != null) {
         final fullPhone =
-            '$_selectedCountryCode${phoneController.text.replaceAll(RegExp(r'\\D'), '')}';
+            '$_selectedCountryCode${phoneController.text.replaceAll(RegExp(r'\D'), '')}';
 
-        // ✅ Insert user with activation_key_id
         await Supabase.instance.client.from('users').insert({
           'id': user.id,
           'email': emailController.text.trim(),
           'username': usernameController.text.trim(),
           'phone': fullPhone,
-          'activation_key_id': activationKey['id'], // ⭐️ key added here
+          'activation_key_id': activationKey['id'],
           'created_at': DateTime.now().toIso8601String(),
         });
 
-        // ✅ Insert to activation_key_users table
         await Supabase.instance.client.from('activation_key_users').insert({
           'activation_key_id': activationKey['id'],
           'user_id': user.id,
@@ -151,7 +148,6 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-
   Widget buildInput({
     required String label,
     required TextEditingController controller,
@@ -193,166 +189,195 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget buildPhoneInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 8),
-        Row(
+    return FormField<String>(
+      validator: (value) {
+        final digits = phoneController.text.replaceAll(RegExp(r'\D'), '');
+        if (digits.length != 10) {
+          return 'Enter a valid 10-digit phone number';
+        }
+        return null;
+      },
+      builder: (FormFieldState<String> field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedCountryCode,
-                  items: _countryCodes
-                      .map((code) => DropdownMenuItem(value: code, child: Text(code)))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCountryCode = value!;
-                    });
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
-                inputFormatters: [TenDigitPhoneFormatter()],
-                decoration: const InputDecoration(
-                  hintText: '5XX XXX XXXX',
-                  counterText: '',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  final digits = value?.replaceAll(RegExp(r'\D'), '') ?? '';
-                  if (digits.length != 10) {
-                    return 'Enter a valid 10-digit phone number';
-                  }
-                  return null;
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          title: const Text('Register', style: TextStyle(color: Colors.white)),
-          backgroundColor: const Color(0xFFFF0000),
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Form(
-            key: _formKey,
-            child: ListView(
+            Row(
               children: [
-                buildInput(
-                  label: "Username",
-                  controller: usernameController,
-                  icon: Icons.person,
-                  validator: (value) =>
-                  value == null || value.isEmpty ? 'Username is required' : null,
-                ),
-                const SizedBox(height: 20),
-                buildInput(
-                  label: "Email",
-                  controller: emailController,
-                  icon: Icons.email,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Email is required';
-                    final emailRegex =
-                    RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                    if (!emailRegex.hasMatch(value)) return 'Enter a valid email address';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                buildPhoneInput(),
-                const SizedBox(height: 20),
-                buildInput(
-                  label: "Activation Key",
-                  controller: activationKeyController,
-                  icon: Icons.vpn_key,
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Activation key is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                buildInput(
-                  label: "Password",
-                  controller: passwordController,
-                  icon: Icons.lock,
-                  isPassword: true,
-                  isObscure: !isPasswordVisible,
-                  toggleObscure: () {
-                    setState(() {
-                      isPasswordVisible = !isPasswordVisible;
-                    });
-                  },
-                  validator: (value) => value == null || value.length < 6
-                      ? 'Password must be at least 6 characters'
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                buildInput(
-                  label: "Confirm Password",
-                  controller: confirmPasswordController,
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                  isObscure: !isConfirmPasswordVisible,
-                  toggleObscure: () {
-                    setState(() {
-                      isConfirmPasswordVisible = !isConfirmPasswordVisible;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please confirm your password';
-                    if (value != passwordController.text) return 'Passwords do not match';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                if (errorMessage != null)
-                  Text(errorMessage!, style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: createUser,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: const Color(0xFFFF0000),
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white, // ⬅️ Ensure white background
+                    border: Border.all(color: Colors.black),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      dropdownColor: Colors.white, // ⬅️ Dropdown white
+                      value: _selectedCountryCode,
+                      items: _countryCodes
+                          .map((code) => DropdownMenuItem(
+                        value: code,
+                        child: Text(code),
+                      ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCountryCode = value!;
+                        });
+                      },
                     ),
                   ),
-                  child: const Text(
-                    "Register",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 10,
+                    inputFormatters: [TenDigitPhoneFormatter()],
+                    decoration: const InputDecoration(
+                      hintText: '5XX XXX XXXX',
+                      counterText: '',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
               ],
+            ),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 8),
+                child: Text(
+                  field.errorText!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: const Color(0xFF282828),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: SafeArea(
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            title: const Text('Register', style: TextStyle(color: Colors.white)),
+            backgroundColor: const Color(0xFF282828),
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  buildInput(
+                    label: "Username",
+                    controller: usernameController,
+                    icon: Icons.person,
+                    validator: (value) =>
+                    value == null || value.isEmpty ? 'Username is required' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  buildInput(
+                    label: "Email",
+                    controller: emailController,
+                    icon: Icons.email,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Email is required';
+                      final emailRegex =
+                      RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      if (!emailRegex.hasMatch(value)) return 'Enter a valid email address';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  buildPhoneInput(),
+                  const SizedBox(height: 20),
+                  buildInput(
+                    label: "Activation Key",
+                    controller: activationKeyController,
+                    icon: Icons.vpn_key,
+                    keyboardType: TextInputType.number,
+                    validator: (value) =>
+                    value == null || value.isEmpty ? 'Activation key is required' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  buildInput(
+                    label: "Password",
+                    controller: passwordController,
+                    icon: Icons.lock,
+                    isPassword: true,
+                    isObscure: !isPasswordVisible,
+                    toggleObscure: () {
+                      setState(() {
+                        isPasswordVisible = !isPasswordVisible;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Password is required';
+                      }
+                      final passwordRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$');
+                      if (!passwordRegex.hasMatch(value)) {
+                        return 'Password must include at least:\n• 1 uppercase letter\n• 1 lowercase letter\n• 1 number';
+                      }
+                      return null;
+                    },
+
+                  ),
+                  const SizedBox(height: 20),
+                  buildInput(
+                    label: "Confirm Password",
+                    controller: confirmPasswordController,
+                    icon: Icons.lock_outline,
+                    isPassword: true,
+                    isObscure: !isConfirmPasswordVisible,
+                    toggleObscure: () {
+                      setState(() {
+                        isConfirmPasswordVisible = !isConfirmPasswordVisible;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Please confirm your password';
+                      if (value != passwordController.text) return 'Passwords do not match';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  if (errorMessage != null)
+                    Text(errorMessage!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: createUser,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: const Color(0xFFFF0000),
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "Register",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
