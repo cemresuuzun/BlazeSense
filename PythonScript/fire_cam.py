@@ -2,7 +2,6 @@
 # Bu kod demonstration için kullanılıp API endpointlerle bağlandıktan sonra son halini alabilecektir. Needs update
 # Belirtilen importlar yolo, database ve config dosyasıdır.
 # SUPABASE_URL, SUPABASE_KEY, USER_ID, CAMERA_ID, IP_CAMERA_URL confidential bilgileri githuba gönderilmeyecek bir config dosyasında saklanmaktadır kod bu şekilde çalışmayacaktır
-
 import cv2
 from ultralytics import YOLO
 import time
@@ -14,7 +13,8 @@ from collections import deque
 import threading
 
 # === SETTINGS ===
-API_BASE_URL = "http://localhost:8000"  # Adjust if deployed
+API_BASE_URL = "http://localhost:8000"
+#API_BASE_URL = "http://192.168.1.102:8000"
 PRE_SECONDS = 5
 POST_SECONDS = 5
 FPS = 20
@@ -22,7 +22,7 @@ WIDTH, HEIGHT = 640, 480
 VIDEO_DIR = "saved_clips"
 frame_skip = 2
 notification_delay = 5
-whatsapp_number = '+905335117541'  # Optional: Make dynamic if needed
+whatsapp_number = '+905335117541'  # Optional
 
 # === LOAD MODEL ===
 model = YOLO("Yolo/best.pt")
@@ -74,13 +74,13 @@ def send_whatsapp_message(to_number):
         print(f"❌ WhatsApp error: {e}")
 
 # === SEND FIRE NOTIFICATION TO API + WHATSAPP ===
-def send_fire_notification_via_api(user_id, camera_id, message):
+def send_fire_notification_via_api(activation_key_id, camera_id, message):
     global last_notification_time
     current_time = time.time()
 
     if current_time - last_notification_time >= notification_delay:
         payload = {
-            "user_id": user_id,
+            "activation_key_id": activation_key_id,
             "camera_id": camera_id,
             "message": message,
             "timestamp": datetime.utcnow().isoformat() + "Z"
@@ -108,7 +108,7 @@ try:
             print("🕐 Waiting for activation key to be set from Flutter...")
             time.sleep(5)
 
-    user_id = info["user_id"]
+    activation_key_id = info["activation_key_id"]
     cameras = info["cameras"]
 
     if not cameras:
@@ -163,7 +163,7 @@ try:
 
                         threading.Thread(
                             target=send_fire_notification_via_api,
-                            args=(user_id, camera_id, "🔥 Fire detected!")
+                            args=(activation_key_id, camera_id, "🔥 Fire detected!")
                         ).start()
 
         if fire_detected:

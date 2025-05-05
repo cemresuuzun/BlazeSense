@@ -7,9 +7,34 @@ import '../main.dart'; // for navigatorKey
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
 
-// Listen to fire notifications
-void listenToFireNotifications() {
+void listenToFireNotifications() async {
   print("📡 Listening for notifications from Supabase...");
+
+  final currentUser = Supabase.instance.client.auth.currentUser;
+  if (currentUser == null) {
+    print("❌ No user logged in.");
+    return;
+  }
+
+  // 🔐 Step 1: Fetch activation_key_ids linked to this user
+  final response = await Supabase.instance.client
+      .from('activation_key_users')
+      .select('activation_key_id')
+      .eq('user_id', currentUser.id)
+      .execute();
+
+  if (response.data == null || (response.data is List && response.data.isEmpty)) {
+    print("❌ No activation keys found for this user.");
+    return;
+  }
+
+  final userKeys = (response.data as List)
+      .map((e) => e['activation_key_id'].toString())
+      .toList();
+
+  print("✅ User is linked to these activation keys: $userKeys");
+
+  // 🔥 Step 2: Listen to fire notifications
   Supabase.instance.client
       .channel('public:notifications')
       .on(
@@ -21,17 +46,15 @@ void listenToFireNotifications() {
     ),
         (payload, [ref]) async {
       final newNotification = payload['new'] as Map<String, dynamic>;
+      final notificationKey = newNotification['activation_key_id']?.toString();
 
-      final currentUser = Supabase.instance.client.auth.currentUser;
-      if (currentUser == null) return;
+      print("📩 Received notification for activation key: $notificationKey");
 
-      // ✅ Filter for this user only
-      if (newNotification['user_id'] == currentUser.id) {
-        final message = newNotification['message'] ?? 'New fire alert';
-        print("🔥 New notification received for this user: $message");
+      if (notificationKey != null && userKeys.contains(notificationKey)) {
+        print("🔥 Notification is for this user!");
         showFireNotification(newNotification);
       } else {
-        print("🙅 Notification is not for this user. Ignored.");
+        print("🙅 Notification ignored: activation key mismatch.");
       }
     },
   )
