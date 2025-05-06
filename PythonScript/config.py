@@ -12,3 +12,6 @@ IP_CAMERA_URL1 = "rtsp://192.168.1.31:554/Streaming/Channels/101" # Modify based
 # Twilio credentials
 ACCOUNT_SID = "AC3de5310a7a788b7fe4dd62011a43e24d"
 AUTH_TOKEN = "bf9d1d465b43a391d9ba58df85d80e34"
+
+EMAIL_ADDRESS = "BlazeSense.Alert@gmail.com"
+EMAIL_PASSWORD = "zizperutkormcjur"
