@@ -7,8 +7,10 @@ class AuthService {
   final String backendBaseUrl = "http://localhost:8000"; // Change if deployed
 
   // ✅ Sign Up
-  Future<AuthResponse> signUp({required String email, required String password}) async {
-    final response = await _client.auth.signUp(email: email, password: password);
+  Future<AuthResponse> signUp(
+      {required String email, required String password}) async {
+    final response =
+        await _client.auth.signUp(email: email, password: password);
 
     // Optionally fetch camera info
     if (response.user != null) {
@@ -19,8 +21,10 @@ class AuthService {
   }
 
   // ✅ Sign In
-  Future<AuthResponse> signIn({required String email, required String password}) async {
-    final response = await _client.auth.signInWithPassword(email: email, password: password);
+  Future<AuthResponse> signIn(
+      {required String email, required String password}) async {
+    final response =
+        await _client.auth.signInWithPassword(email: email, password: password);
 
     if (response.user != null) {
       final userId = response.user!.id;
@@ -57,7 +61,6 @@ class AuthService {
           print("⚠️ Could not notify backend: $e");
           // Optionally: Show error or let user proceed anyway
         }
-
       } catch (e) {
         print("❌ Failed to fetch user data or notify backend: $e");
         // Optional: You can throw here or allow login to continue

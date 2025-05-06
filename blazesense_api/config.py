@@ -8,3 +8,6 @@ CAMERA_ID = "ab70e576-ceb5-4682-bcfb-9dce97243fa5"  # Gerçek camera ID'yi buray
 # Replace with your IP camera's RTSP or HTTP stream URL
 IP_CAMERA_URL = "rtsp://admin:BlazeSense2025@192.168.1.70:554/Streaming/Channels/102" 
 IP_CAMERA_URL1 = "rtsp://192.168.1.74:554/Streaming/Channels/101" # Modify based on your camera's protocol
+
+EMAIL_ADDRESS = "BlazeSense.Alert@gmail.com"
+EMAIL_PASSWORD = "zizperutkormcjur"

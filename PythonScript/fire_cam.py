@@ -11,10 +11,15 @@ from twilio.rest import Client
 import os
 from collections import deque
 import threading
+from send_email import send_fire_alert
+from supabase import create_client
+from config import SUPABASE_URL, SUPABASE_KEY
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 # === SETTINGS ===
 API_BASE_URL = "http://localhost:8000"
-#API_BASE_URL = "http://192.168.1.102:8000"
 PRE_SECONDS = 5
 POST_SECONDS = 5
 FPS = 20
@@ -26,6 +31,8 @@ whatsapp_number = '+905335117541'  # Optional
 
 # === LOAD MODEL ===
 model = YOLO("Yolo/best.pt")
+#model = YOLO(r"C:\BlazeSense\BlazeSense\Yolo\best.pt")
+
 
 # === SETUP DIRECTORIES ===
 if not os.path.exists(VIDEO_DIR):
@@ -78,24 +85,64 @@ def send_fire_notification_via_api(activation_key_id, camera_id, message):
     global last_notification_time
     current_time = time.time()
 
-    if current_time - last_notification_time >= notification_delay:
-        payload = {
-            "activation_key_id": activation_key_id,
-            "camera_id": camera_id,
-            "message": message,
-            "timestamp": datetime.utcnow().isoformat() + "Z"
-        }
-        print("📤 Sending fire payload:", payload)
-        try:
-            res = requests.post(f"{API_BASE_URL}/detect/fire", json=payload)
-            print("🔥 API yanıtı:", res.status_code)
-            print("📦 İçerik:", res.json())
-            threading.Thread(target=send_whatsapp_message, args=(whatsapp_number,)).start()
-            last_notification_time = current_time
-        except Exception as e:
-            print("❌ API error:", e)
-    else:
+    if current_time - last_notification_time < notification_delay:
         print("⏳ Notification delay not met.")
+        return
+
+    # Step 1: Save to backend API (for logs)
+    payload = {
+        "activation_key_id": activation_key_id,
+        "camera_id": camera_id,
+        "message": message,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+
+    try:
+        res = requests.post(f"{API_BASE_URL}/detect/fire", json=payload)
+        print("🔥 API response:", res.status_code)
+        print("📦 Content:", res.json())
+    except Exception as e:
+        print("❌ API error:", e)
+
+    # Step 2: Send WhatsApp
+    threading.Thread(target=send_whatsapp_message, args=(whatsapp_number,)).start()
+
+    # Step 3: Send Email
+    try:
+        # Get user_ids
+        user_relations = supabase.table("activation_key_users") \
+            .select("user_id") \
+            .eq("activation_key_id", activation_key_id) \
+            .execute()
+        user_ids = [u["user_id"] for u in user_relations.data]
+
+        # Get emails
+        users = supabase.table("users") \
+            .select("email") \
+            .in_("id", user_ids) \
+            .execute()
+        emails = [u["email"] for u in users.data]
+
+        if not emails:
+            print("⚠️ No user emails found.")
+        else:
+            subject = "🔥 Fire Alert - BlazeSense"
+            body = (
+                f"🚨 BlazeSense Alert 🚨\n\n"
+                f"A fire has been detected!\n\n"
+                f"📍 Camera ID: {camera_id}\n"
+                f"🕒 Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
+                f"📝 Message: {message}\n\n"
+                f"Please take immediate action.\n\n"
+                f"– BlazeSense System"
+            )
+            send_fire_alert(emails, subject, body)
+            print(f"📧 Email sent to: {emails}")
+    except Exception as e:
+        print(f"❌ Email error: {e}")
+
+    last_notification_time = current_time
+
 
 # === MAIN LOOP ===
 try:
