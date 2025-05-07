@@ -170,6 +170,7 @@ class NotificationLogPageState extends State<NotificationLogPage> {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
+                        backgroundColor: const Color(0xFFF2F2F6),
                         title: const Text('Mark as Reviewed'),
                         content: const Text(
                             'Are you sure you want to mark this as reviewed?'),
@@ -220,6 +221,7 @@ class NotificationLogPageState extends State<NotificationLogPage> {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
+                      backgroundColor: const Color(0xFFF2F2F6),
                       title: const Text('Are you sure?'),
                       content: const Text(
                           'Do you really want to delete this notification?'),

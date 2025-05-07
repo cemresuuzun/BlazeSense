@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
   final SupabaseClient _client = Supabase.instance.client;
-  final String backendBaseUrl = "http://localhost:8000"; // Change if deployed
+  final String backendBaseUrl = "http://192.168.1.102:8000"; // Change for real device -localhost for simulator
 
   // ✅ Sign Up
   Future<AuthResponse> signUp({required String email, required String password}) async {
@@ -94,6 +94,62 @@ class AuthService {
     await _client.auth.updateUser(
       UserAttributes(password: newPassword),
     );
+  }
+  Future<void> ensureBackendNotifiedOnStartup() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final userData = await _client
+          .from('users')
+          .select('activation_key_id')
+          .eq('id', user.id)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 10), onTimeout: () {
+        throw Exception("Supabase query timeout");
+      });
+
+      final activationKeyId = userData?['activation_key_id'];
+      if (activationKeyId == null) {
+        print("❌ User has no activation_key_id.");
+        return;
+      }
+
+      await _keepTryingNotifyBackend(activationKeyId);
+    } catch (e) {
+      print("❌ Failed to fetch activation key on startup: $e");
+    }
+  }
+
+  Future<void> _keepTryingNotifyBackend(String activationKeyId) async {
+    const maxRetries = 10;
+    const delayBetweenTries = Duration(seconds: 3);
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      print("🔁 Attempt $attempt to notify backend...");
+
+      try {
+        final url = Uri.parse('$backendBaseUrl/update-activation');
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({"activation_key_id": activationKeyId}),
+        );
+
+        if (response.statusCode == 200) {
+          print("✅ Successfully notified backend on attempt $attempt");
+          return;
+        } else {
+          print("❌ Backend returned error: ${response.statusCode} - ${response.body}");
+        }
+      } catch (e) {
+        print("⚠️ Error notifying backend: $e");
+      }
+
+      await Future.delayed(delayBetweenTries);
+    }
+
+    print("🚨 Max retries reached. Backend not notified.");
   }
 
   // ✅ Notify Backend with Activation Key

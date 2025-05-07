@@ -45,14 +45,11 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF282828),
-      statusBarIconBrightness: Brightness.light,
-    ));
     listenToFireNotifications();
     _initializeChannels();
     loadCameras();
     deviceChangeNotifier.addListener(_onDeviceChanged);
+    AuthService().ensureBackendNotifiedOnStartup();
   }
 
   void _onDeviceChanged() {
@@ -378,7 +375,7 @@ class _MainPageState extends State<MainPage> {
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.white,
             currentIndex: _selectedIndex,
-            selectedItemColor: const Color(0xFF333333),
+            selectedItemColor: const Color(0xFFFF0000),
             unselectedItemColor: Colors.black45,
             showUnselectedLabels: true,
             selectedLabelStyle: const TextStyle(fontSize: 12),

@@ -24,10 +24,6 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF282828),
-      statusBarIconBrightness: Brightness.light,
-    ));
   }
 
   String constructRtspUrl(String username, String password, String ipAddress) {
@@ -80,7 +76,6 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
       final user = supabase.auth.currentUser;
       if (user == null) throw Exception('User not logged in');
 
-      // 🎯 Fetch activation key ID
       final activationKeyRow = await supabase
           .from('users')
           .select('activation_key_id')
@@ -93,7 +88,6 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
 
       final activationKeyId = activationKeyRow['activation_key_id'];
 
-      // 🎯 Check camera count for this activation key
       final cameras = await supabase
           .from('ip_cameras')
           .select('id')
@@ -108,13 +102,11 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
 
       final rtspUrl = constructRtspUrl(username, password, camIp);
 
-      // ✅ Insert new camera
       await supabase.from('ip_cameras').insert({
         'activation_key_id': activationKeyId,
         'user_id': user.id,
         'name': cameraName,
         'ip_address': rtspUrl,
-
       });
 
       if (!mounted) return;
@@ -138,114 +130,117 @@ class _ChangeViewPageState extends State<ChangeViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F6),
-      appBar: AppBar(
-        title: const Text('Add Device'),
-        backgroundColor: const Color(0xFF282828),
-        foregroundColor: Colors.white,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF282828),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _buildField('Camera Name', cameraNameController, Icons.videocam),
-            _buildField('Username', usernameController, Icons.camera_alt),
-            _buildField('Password', passwordController, Icons.lock, isPassword: true),
-            _buildField('Cam IP', camIpController, Icons.link),
-
-            const SizedBox(height: 20),
-
-            // Add Device Button
-            GestureDetector(
-              onTap: isLoading ? null : addDevice,
-              child: Container(
-                width: double.infinity,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: isLoading
-                      ? const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF555555)),
-                  )
-                      : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.add_circle_outline, color: Color(0xFF555555)),
-                      SizedBox(width: 10),
-                      Text(
-                        'Add Device',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF555555),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Manage Devices Button
-            GestureDetector(
-              onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ManageDevicesPage(onDevicesChanged: widget.onDevicesChanged)),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.settings, color: Color(0xFF555555)),
-                      SizedBox(width: 10),
-                      Text(
-                        'Manage Devices',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF555555),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            if (errorMessage != null) ...[
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2F2F6),
+        appBar: AppBar(
+          title: const Text('Add Device'),
+          backgroundColor: const Color(0xFF282828),
+          foregroundColor: Colors.white,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              _buildField('Camera Name', cameraNameController, Icons.videocam),
+              _buildField('Username', usernameController, Icons.camera_alt),
+              _buildField('Password', passwordController, Icons.lock, isPassword: true),
+              _buildField('Cam IP', camIpController, Icons.link),
               const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  errorMessage!,
-                  style: const TextStyle(
-                    color: Color(0xFFFF0000),
-                    fontWeight: FontWeight.w500,
+              GestureDetector(
+                onTap: isLoading ? null : addDevice,
+                child: Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF0000),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: isLoading
+                        ? const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF555555)),
+                    )
+                        : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Add Device',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ManageDevicesPage(
+                        onDevicesChanged: widget.onDevicesChanged,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.settings, color: Color(0xFF555555)),
+                        SizedBox(width: 10),
+                        Text(
+                          'Manage Devices',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF555555),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    errorMessage!,
+                    style: const TextStyle(
+                      color: Color(0xFFFF0000),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
