@@ -217,7 +217,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                   children: [
                     Image.asset('assets/LogoApp.png', height: 200, fit: BoxFit.scaleDown),
                     const SizedBox(height: 8),
-                    const Text('Blaze Sense',
+                    const Text('BlazeSense',
                         style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black, letterSpacing: 2)),
                     const SizedBox(height: 8),
                     const Text('Fire Detection System', style: TextStyle(fontSize: 16, color: Colors.black54)),

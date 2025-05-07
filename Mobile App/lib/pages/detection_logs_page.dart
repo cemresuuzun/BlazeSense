@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 
 class DetectionLogsPage extends StatefulWidget {
   const DetectionLogsPage({super.key});
 
   @override
-  State<DetectionLogsPage> createState() => _DetectionLogsPageState();
+  State<DetectionLogsPage> createState() => DetectionLogsPageState();
 }
 
-class _DetectionLogsPageState extends State<DetectionLogsPage> {
+class DetectionLogsPageState extends State<DetectionLogsPage> {
   List<Map<String, dynamic>> _reviewedNotifs = [];
   bool _hasLoaded = false;
 
@@ -24,25 +25,60 @@ class _DetectionLogsPageState extends State<DetectionLogsPage> {
   }
 
   Future<void> fetchReviewedNotifications() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final user = Supabase.instance.client.auth.currentUser;
 
-    if (userId == null || userId.isEmpty) {
+    if (user == null) {
+      if (!mounted) return;
       setState(() => _hasLoaded = true);
       return;
     }
 
-    final response = await Supabase.instance.client
-        .from('notifications')
-        .select('id, message, timestamp, ip_cameras(id, name)')
-        .eq('user_id', userId)
-        .eq('is_reviewed', true)
-        .order('timestamp', ascending: false)
-        .execute();
+    try {
+      final userRow = await Supabase.instance.client
+          .from('users')
+          .select('activation_key_id')
+          .eq('id', user.id)
+          .single();
 
-    setState(() {
-      _reviewedNotifs = List<Map<String, dynamic>>.from(response.data ?? []);
-      _hasLoaded = true;
-    });
+      final activationKeyId = userRow['activation_key_id'];
+      if (activationKeyId == null) throw Exception('No activation key found');
+
+      final cameraRows = await Supabase.instance.client
+          .from('ip_cameras')
+          .select('id')
+          .eq('activation_key_id', activationKeyId);
+
+      final cameraIds = cameraRows.map((cam) => cam['id']).toList();
+
+      if (cameraIds.isEmpty) {
+        setState(() {
+          _reviewedNotifs = [];
+          _hasLoaded = true;
+        });
+        return;
+      }
+
+      final response = await Supabase.instance.client
+          .from('notifications')
+          .select('id, message, timestamp, video_url, ip_cameras(id, name)')
+          .in_('camera_id', cameraIds)
+          .eq('is_reviewed', true)
+          .order('timestamp', ascending: false);
+
+      if (!mounted) return;
+
+      setState(() {
+        _reviewedNotifs = List<Map<String, dynamic>>.from(response);
+        _hasLoaded = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _hasLoaded = true;
+        _reviewedNotifs = [];
+      });
+      print("❌ Error fetching reviewed notifications: $e");
+    }
   }
 
   @override
@@ -72,11 +108,26 @@ class _DetectionLogsPageState extends State<DetectionLogsPage> {
             return Column(
               children: [
                 ListTile(
+                  onTap: () {
+                    final videoUrl = data['video_url'];
+                    if (videoUrl != null && videoUrl.isNotEmpty) {
+                      showDialog(
+                        context: context,
+                        builder: (_) => VideoDialog(videoUrl: videoUrl),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('No video available for this detection')),
+                      );
+                    }
+                  },
                   dense: true,
-                  contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  leading: const Icon(Icons.warning,
-                      color: Color(0xFFFF0000), size: 24),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  leading: const Icon(
+                    Icons.warning,
+                    color: Color(0xFFFF0000),
+                    size: 24,
+                  ),
                   title: Text(
                     "$cameraName  Fire reviewed",
                     style: const TextStyle(
@@ -112,7 +163,57 @@ class _DetectionLogsPageState extends State<DetectionLogsPage> {
           },
         ),
       ),
+    );
+  }
+}
 
+class VideoDialog extends StatefulWidget {
+  final String videoUrl;
+
+  const VideoDialog({super.key, required this.videoUrl});
+
+  @override
+  State<VideoDialog> createState() => _VideoDialogState();
+}
+
+class _VideoDialogState extends State<VideoDialog> {
+  late VlcPlayerController _vlcController;
+
+  @override
+  void initState() {
+    super.initState();
+    _vlcController = VlcPlayerController.network(
+      widget.videoUrl,
+      hwAcc: HwAcc.full,
+      autoPlay: true,
+      options: VlcPlayerOptions(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _vlcController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFFF2F2F6),
+      content: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: VlcPlayer(
+          controller: _vlcController,
+          aspectRatio: 16 / 9,
+          placeholder: const Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        )
+      ],
     );
   }
 }

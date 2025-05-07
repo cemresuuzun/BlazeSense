@@ -1,3 +1,4 @@
+
 # Database ilişkileri API üzerinden kurulmamıştır!!! APIendpointler belirlenerek api ile veri alışverişi yapılacaktır
 # Bu kod demonstration için kullanılıp API endpointlerle bağlandıktan sonra son halini alabilecektir. Needs update
 # Belirtilen importlar yolo, database ve config dosyasıdır.
@@ -11,25 +12,20 @@ from twilio.rest import Client
 import os
 from collections import deque
 import threading
+from record import trigger_save_clip_and_get_url  #  S3 uploader 
 
 # === SETTINGS ===
 API_BASE_URL = "http://localhost:8000"
-#API_BASE_URL = "http://192.168.1.102:8000"
 PRE_SECONDS = 5
 POST_SECONDS = 5
 FPS = 20
 WIDTH, HEIGHT = 640, 480
-VIDEO_DIR = "saved_clips"
 frame_skip = 2
 notification_delay = 5
 whatsapp_number = '+905335117541'  # Optional
 
 # === LOAD MODEL ===
-model = YOLO("Yolo/best.pt")
-
-# === SETUP DIRECTORIES ===
-if not os.path.exists(VIDEO_DIR):
-    os.makedirs(VIDEO_DIR)
+model = YOLO("Yolo/new_best.pt")
 
 # === BUFFERS ===
 frame_buffer = deque(maxlen=PRE_SECONDS * FPS)
@@ -52,16 +48,7 @@ def get_camera_info():
         raise Exception(f"Camera info fetch failed: {response.text}")
     return response.json()
 
-# === SAVE FIRE VIDEO CLIP ===
-def save_clip(frames, width, height):
-    filename = os.path.join(VIDEO_DIR, f"fire_clip_{int(time.time())}.mp4")
-    writer = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'XVID'), FPS, (width, height))
-    for frame in frames:
-        writer.write(frame)
-    writer.release()
-    print(f"✅ Fire clip saved: {filename}")
-
-# === SEND WHATSAPP MESSAGE ===
+# === WHATSAPP NOTIFICATION ===
 def send_whatsapp_message(to_number):
     try:
         message = twilio_client.messages.create(
@@ -73,7 +60,7 @@ def send_whatsapp_message(to_number):
     except Exception as e:
         print(f"❌ WhatsApp error: {e}")
 
-# === SEND FIRE NOTIFICATION TO API + WHATSAPP ===
+# === FIRE NOTIFICATION TO API + WhatsApp ===
 def send_fire_notification_via_api(activation_key_id, camera_id, message):
     global last_notification_time
     current_time = time.time()
@@ -88,14 +75,28 @@ def send_fire_notification_via_api(activation_key_id, camera_id, message):
         print("📤 Sending fire payload:", payload)
         try:
             res = requests.post(f"{API_BASE_URL}/detect/fire", json=payload)
+            res_data = res.json()
             print("🔥 API yanıtı:", res.status_code)
-            print("📦 İçerik:", res.json())
+            print("📦 İçerik:", res_data)
             threading.Thread(target=send_whatsapp_message, args=(whatsapp_number,)).start()
             last_notification_time = current_time
+            return res_data.get("uuid")  # Needed for video update
         except Exception as e:
             print("❌ API error:", e)
     else:
         print("⏳ Notification delay not met.")
+    return None
+
+# === UPDATE VIDEO URL ===
+def update_video_url(notification_id, video_url):
+    try:
+        requests.post(f"{API_BASE_URL}/update-video-url", json={
+            "id": notification_id,
+            "video_url": video_url
+        })
+        print(f"🔗 Updated notification {notification_id} with video URL.")
+    except Exception as e:
+        print("❌ Failed to update video URL:", e)
 
 # === MAIN LOOP ===
 try:
@@ -161,17 +162,20 @@ try:
                             fire_frame_count = 0
                             post_fire_frames = list(frame_buffer)
 
-                        threading.Thread(
-                            target=send_fire_notification_via_api,
-                            args=(activation_key_id, camera_id, "🔥 Fire detected!")
-                        ).start()
+                        def full_notify_and_upload():
+                            notif_id = send_fire_notification_via_api(activation_key_id, camera_id, "🔥 Fire detected!")
+                            if notif_id:
+                                video_url = trigger_save_clip_and_get_url()
+                                if video_url:
+                                    update_video_url(notif_id, video_url)
+
+                        threading.Thread(target=full_notify_and_upload).start()
 
         if fire_detected:
             post_fire_frames.append(frame_resized)
             fire_frame_count += 1
             if fire_frame_count >= post_max_frames:
                 fire_detected = False
-                save_clip(post_fire_frames, WIDTH, HEIGHT)
                 post_fire_frames.clear()
 
         cv2.imshow("BlazeSense Fire Detection", frame_resized)

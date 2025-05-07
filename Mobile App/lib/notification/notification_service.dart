@@ -110,12 +110,13 @@ Future<void> showFireNotification(Map<String, dynamic> notification) async {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFFF2F2F6),
           title: const Text(fireDetectedTitle),
           content: Text(notification['message'] ?? 'Please review the fire incident.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Dismiss'),
+              child: const Text('Not Confirmed'),
             ),
             TextButton(
               onPressed: () async {

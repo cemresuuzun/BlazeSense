@@ -41,6 +41,7 @@ dependencies:
   vibration: ^1.8.4
   flutter_slidable: ^3.0.0
   flutter_vlc_player: ^7.4.1
+  video_player: ^2.7.0
 
 
 dev_dependencies:

@@ -268,7 +268,6 @@ class _RegisterPageState extends State<RegisterPage> {
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
-      child: SafeArea(
         child: Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
@@ -381,7 +380,6 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
         ),
-      ),
     );
   }
 }
